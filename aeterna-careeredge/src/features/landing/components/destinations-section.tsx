@@ -1,62 +1,68 @@
+"use client";
+
 import Image from "next/image";
-import { ArrowUpRight, Globe2 } from "lucide-react";
+import { Globe2 } from "lucide-react";
+import { motion, type Variants } from "motion/react";
 
 const destinations = [
   {
     name: "United Kingdom",
-    code: "UK",
+    flag: "🇬🇧",
     image: "/assets/images/destinations/uk.webp",
-    description: "Explore universities and career opportunities.",
   },
   {
     name: "Canada",
-    code: "CA",
+    flag: "🇨🇦",
     image: "/assets/images/destinations/canada.webp",
-    description: "Discover education and professional pathways.",
   },
   {
     name: "Germany",
-    code: "DE",
+    flag: "🇩🇪",
     image: "/assets/images/destinations/germany.webp",
-    description: "Explore academic and industry opportunities.",
   },
   {
     name: "United States",
-    code: "US",
+    flag: "🇺🇸",
     image: "/assets/images/destinations/usa.webp",
-    description: "Explore a wide range of study options.",
   },
   {
     name: "Australia",
-    code: "AU",
+    flag: "🇦🇺",
     image: "/assets/images/destinations/australia.webp",
-    description: "Discover study and career possibilities.",
   },
   {
     name: "Ireland",
-    code: "IE",
+    flag: "🇮🇪",
     image: "/assets/images/destinations/ireland.webp",
-    description: "Explore education and future pathways.",
   },
 ];
+
+const container = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08 } },
+};
+
+const item: Variants = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+};
 
 export function DestinationsSection() {
   return (
     <section className="overflow-hidden bg-white py-20 sm:py-24">
       <div className="page-container">
-        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+        <div className="mb-12 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
           <div className="max-w-2xl">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
               Think beyond borders
             </p>
 
-            <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-5xl">
               Your ambitions can take you places.
             </h2>
 
-            <p className="mt-5 text-base leading-7 text-secondary-text">
-              Exploring international education? Discover destinations and start
-              preparing for the opportunities ahead.
+            <p className="mt-4 text-base leading-7 text-secondary-text">
+              Explore destinations and discover opportunities around the world.
             </p>
           </div>
 
@@ -66,63 +72,68 @@ export function DestinationsSection() {
           </div>
         </div>
 
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <motion.div
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, amount: 0.2 }}
+          className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+        >
           {destinations.map((destination) => (
-            <article
-              key={destination.code}
-              className="group relative isolate min-h-[260px] overflow-hidden rounded-2xl bg-primary-dark"
+            <motion.article
+              key={destination.name}
+              variants={item}
+              whileHover={{ y: -8 }}
+              transition={{ type: "spring", stiffness: 300, damping: 22 }}
+              className="group relative h-[180px] overflow-hidden rounded-3xl bg-primary-dark shadow-md ring-1 ring-black/5 hover:shadow-2xl sm:h-[340px]"
             >
               <Image
                 src={destination.image}
                 alt={`Scenic view of ${destination.name}`}
                 fill
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                className="object-cover transition duration-700 group-hover:scale-105"
+                className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
               />
 
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/5" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
 
-              <div className="absolute inset-x-0 bottom-0 p-6 text-white">
-                <div className="flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
-                      {destination.code}
-                    </p>
-                    <h3 className="mt-2 font-heading text-2xl font-bold">
-                      {destination.name}
-                    </h3>
-                    <p className="mt-2 max-w-xs text-sm leading-5 text-white/80">
-                      {destination.description}
-                    </p>
-                  </div>
-
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/40 bg-white/10 transition group-hover:bg-gold group-hover:text-primary-dark">
-                    <ArrowUpRight size={19} />
+              <div className="absolute inset-x-0 bottom-0 p-6">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-2xl backdrop-blur-md ring-1 ring-white/30">
+                    {destination.flag}
                   </span>
+                  <h3 className="font-heading text-xl font-bold text-white sm:text-2xl">
+                    {destination.name}
+                  </h3>
                 </div>
               </div>
-            </article>
+            </motion.article>
           ))}
-        </div>
+        </motion.div>
 
-        <div className="mt-8 rounded-2xl border border-border bg-background p-6 sm:p-8">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold-soft text-primary">
-              <Globe2 size={21} />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="mt-12 rounded-3xl border border-border bg-background p-6 sm:p-8"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gold-soft text-primary">
+              <Globe2 size={22} />
             </div>
 
             <div>
-              <h3 className="font-heading text-base font-bold text-foreground">
-                Your career journey doesn't depend on a destination.
+              <h3 className="font-heading text-base font-bold text-foreground sm:text-lg">
+                Your career journey doesn&apos;t depend on a destination.
               </h3>
               <p className="mt-1 text-sm leading-6 text-secondary-text">
-                Resume building, career discovery, LinkedIn preparation and
-                employability tools are available independently of your decision
-                to study abroad.
+                Build your resume, discover careers and prepare for
+                opportunities wherever you choose to go.
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
