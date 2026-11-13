@@ -2,9 +2,15 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { Libre_Baskerville } from "next/font/google";
+
+const brandFont = Libre_Baskerville({
+  subsets: ["latin"],
+  weight: "700",
+});
 
 const links = [
   { label: "Home", href: "/" },
@@ -52,41 +58,34 @@ export function MarketingNavbar() {
     }`;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#7A0F1F]/95 shadow-md shadow-black/10">
-      <div className="page-container flex h-20 items-center justify-between">
-        <div className="inline-flex items-center rounded-xl px-3 py-2">
-          <Link
-            href="/"
-            aria-label="CareerEdge home"
-            className="group inline-flex items-center gap-2"
-          >
-            <Image
-              src="/assets/logos/company-logo.webp"
-              alt=""
-              width={44}
-              height={44}
-              priority
-              className="h-10 w-10 shrink-0 object-contain"
-            />
+    <header className="sticky top-0 z-40 border-b border-gold bg-[#7A0F1F]/95 shadow-md shadow-black/10">
+      <div className="page-container flex h-20 items-center justify-between gap-5">
+        <Link
+          href="/"
+          aria-label="CareerEdge home"
+          className="group inline-flex shrink-0 items-center gap-2"
+        >
+          <Image
+            src="/assets/logos/company-logo.webp"
+            alt=""
+            width="60"
+            height="60"
+            priority
+            className="h-10 w-10 shrink-0 object-contain"
+          />
+          <div className="flex min-w-0 flex-col justify-center">
+            <span
+              className={`${brandFont.className} bg-gradient-to-b from-[#FFD83D] via-[#F6B51C] to-[#E58F0C] bg-clip-text text-xl font-bold uppercase leading-none tracking-tight text-transparent`}
+            >
+              Aeterna
+            </span>
+            <span className="mt-1.5 text-[10px] font-medium leading-none tracking-[0.3em] text-white/90">
+              CareerEdge
+            </span>
+          </div>
+        </Link>
 
-            <div className="flex flex-col justify-center gap-1">
-              <Image
-                src="/assets/logos/company-name-logo.webp"
-                alt="Company name"
-                width={180}
-                height={42}
-                priority
-                className="block h-9 w-auto object-contain object-left"
-              />
-
-              <span className="text-[11px] font-medium leading-none tracking-wide text-white/75">
-                CareerEdge
-              </span>
-            </div>
-          </Link>
-        </div>
-
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className="hidden flex-1 items-center justify-center gap-7 md:flex">
           {links.map((link) => (
             <Link
               key={link.label}
@@ -99,16 +98,24 @@ export function MarketingNavbar() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-5 md:flex">
+        <div className="hidden shrink-0 items-center gap-6 md:flex">
           <Link
             href="/login"
-            className="text-sm font-semibold text-white transition hover:text-gold"
+            className="rounded-md text-sm font-semibold text-white/90 transition-colors hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark"
           >
             Log in
           </Link>
 
-          <Link href="/signup">
-            <Button size="md">Get Started</Button>
+          <Link
+            href="/signup"
+            className="group inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-5 py-2.5 text-sm font-bold text-primary-dark shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gold-soft hover:shadow-md active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark"
+          >
+            Get Started
+            <ArrowRight
+              size={16}
+              aria-hidden="true"
+              className="transition-transform duration-200 motion-reduce:transition-none group-hover:translate-x-1 group-focus-visible:translate-x-1"
+            />
           </Link>
         </div>
 
@@ -146,7 +153,7 @@ export function MarketingNavbar() {
 
             <Link href="/signup" onClick={() => setMenuOpen(false)}>
               <Button
-                className="border-2 border-amber-300 bg-amber-300 font-bold text-[#7A0F1F] hover:bg-amber-200"
+                className="border-2 border-border-strong font-bold text-[#7A0F1F] hover:bg-amber-200"
                 fullWidth
               >
                 Get Started
