@@ -37,7 +37,7 @@ const textVarients = {
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden bg-background">
-      <div className="page-container grid min-h-[800px] items-center gap-12 py-16 lg:grid-cols-2 lg:py-20">
+      <div className="page-container grid min-h-[800px] items-center gap-12 py-15 lg:grid-cols-2 lg:py-10">
         {/* Hero content */}
         <div className="relative z-10">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-primary">
