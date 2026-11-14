@@ -6,6 +6,7 @@ import { ArrowRight, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Libre_Baskerville } from "next/font/google";
+import { label } from "motion/react-client";
 
 const brandFont = Libre_Baskerville({
   subsets: ["latin"],
@@ -17,6 +18,7 @@ const links = [
   { label: "Features", href: "/#features" },
   { label: "How It Works", href: "/#how-it-works" },
   { label: "About", href: "/#about" },
+  { label: "Contact", href: "/#contact" },
 ];
 
 export function MarketingNavbar() {
@@ -31,7 +33,7 @@ export function MarketingNavbar() {
         .map((link) => ({
           href: link.href,
           top: document
-            .querySelector(link.href.slice(1))
+            .getElementById(link.href.split("#")[1])
             ?.getBoundingClientRect().top,
         }))
         .filter((section) => section.top !== undefined && section.top <= 120)

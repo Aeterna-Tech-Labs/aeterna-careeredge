@@ -105,7 +105,10 @@ export function LeadCaptureSection() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <section id="contact" className="bg-background py-20 sm:py-24">
+      <section
+        id="contact"
+        className="scroll-mt-24 bg-background py-20 sm:py-24"
+      >
         <div className="page-container">
           <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
             {/* Left column */}
