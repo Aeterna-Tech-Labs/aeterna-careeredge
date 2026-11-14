@@ -9,6 +9,7 @@ import {
   ArrowRight,
   CheckCircle2,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { MotionConfig, motion, type Variants } from "motion/react";
 
@@ -65,10 +66,19 @@ export function CollegesSection() {
   return (
     <MotionConfig reducedMotion="user">
       <section className="relative isolate overflow-hidden bg-primary-dark py-20 text-white sm:py-24">
-        {/* Soft background glows */}
+        <Image
+          src="/assets/images/college_students/campus.webp"
+          alt=""
+          aria-hidden="true"
+          fill
+          sizes="100vw"
+          className="-z-30 object-cover"
+        />
+
+        {/* Maroon tint: lower the numbers to show more of the image */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_bottom_left,rgba(246,181,28,0.10),transparent_50%),radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.06),transparent_50%)]"
+          className="pointer-events-none absolute inset-0 -z-20 bg-gradient-to-r from-primary-dark/90 via-primary-dark/80 to-primary-dark/65"
         />
 
         <div className="page-container">
@@ -106,7 +116,7 @@ export function CollegesSection() {
                 className="mt-8 inline-block"
               >
                 <Link
-                  href="/contact"
+                  href="/#contact"
                   className="inline-flex items-center gap-3 rounded-xl bg-gold px-6 py-3.5 text-sm font-bold text-primary-dark shadow-lg shadow-black/20 transition-colors hover:bg-gold-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark"
                 >
                   Explore College Solutions

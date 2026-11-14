@@ -10,6 +10,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { MotionConfig, motion, type Variants } from "motion/react";
+import Link from "next/link";
 
 const features = [
   {
@@ -113,46 +114,48 @@ export function FeaturesSection() {
               const Icon = feature.icon;
 
               return (
-                <motion.li
-                  key={feature.title}
-                  variants={fadeUp}
-                  whileHover={{ y: -6 }}
-                  transition={spring}
-                  className="group relative overflow-hidden rounded-3xl border border-border bg-background p-6 transition-[box-shadow,border-color,background-color] duration-300 hover:border-gold hover:bg-white hover:shadow-xl"
-                >
-                  {/* Accent line that grows in on hover */}
-                  <div
-                    aria-hidden="true"
-                    className="absolute inset-x-0 top-0 h-0.5 origin-left scale-x-0 bg-gradient-to-r from-primary via-gold to-primary transition-transform duration-300 group-hover:scale-x-100"
-                  />
+                <Link href="/login">
+                  <motion.li
+                    key={feature.title}
+                    variants={fadeUp}
+                    whileHover={{ y: -6 }}
+                    transition={spring}
+                    className="group relative overflow-hidden rounded-3xl border border-border bg-background p-6 transition-[box-shadow,border-color,background-color] duration-300 hover:border-gold hover:bg-white hover:shadow-xl"
+                  >
+                    {/* Accent line that grows in on hover */}
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-x-0 top-0 h-0.5 origin-left scale-x-0 bg-gradient-to-r from-primary via-gold to-primary transition-transform duration-300 group-hover:scale-x-100"
+                    />
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-gold/40 bg-gold-soft text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-white">
-                      <Icon size={23} aria-hidden="true" />
+                    <div className="flex items-center justify-between">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-gold/40 bg-gold-soft text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-white">
+                        <Icon size={23} aria-hidden="true" />
+                      </div>
+
+                      <span className="text-sm font-semibold text-primary/30 transition-colors duration-300 group-hover:text-gold">
+                        0{index + 1}
+                      </span>
                     </div>
 
-                    <span className="text-sm font-semibold text-primary/30 transition-colors duration-300 group-hover:text-gold">
-                      0{index + 1}
-                    </span>
-                  </div>
+                    <h3 className="mt-6 font-heading text-lg font-bold text-foreground">
+                      {feature.title}
+                    </h3>
 
-                  <h3 className="mt-6 font-heading text-lg font-bold text-foreground">
-                    {feature.title}
-                  </h3>
+                    <p className="mt-2 min-h-[48px] text-sm leading-6 text-secondary-text">
+                      {feature.description}
+                    </p>
 
-                  <p className="mt-2 min-h-[48px] text-sm leading-6 text-secondary-text">
-                    {feature.description}
-                  </p>
-
-                  <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-primary">
-                    {feature.benefit}
-                    <ArrowUpRight
-                      size={16}
-                      aria-hidden="true"
-                      className="transition-transform duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 motion-reduce:transition-none"
-                    />
-                  </div>
-                </motion.li>
+                    <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-primary">
+                      {feature.benefit}
+                      <ArrowUpRight
+                        size={16}
+                        aria-hidden="true"
+                        className="transition-transform duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 motion-reduce:transition-none"
+                      />
+                    </div>
+                  </motion.li>
+                </Link>
               );
             })}
           </motion.ul>
