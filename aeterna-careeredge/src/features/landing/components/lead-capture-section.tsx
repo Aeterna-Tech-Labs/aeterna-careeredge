@@ -1,27 +1,95 @@
-
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ArrowRight, CheckCircle2, LockKeyhole } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  ChevronDown,
+  LockKeyhole,
+} from "lucide-react";
+import {
+  AnimatePresence,
+  MotionConfig,
+  motion,
+  type Variants,
+} from "motion/react";
 
-const cities = [
-  "Bengaluru",
-  "Mysuru",
-  "Belagavi",
-  "Other",
+const cities = ["Bengaluru", "Mysuru", "Belagavi", "Other"];
+
+const statuses = ["Final-year student", "Graduate", "Working professional"];
+
+const interests = ["Study abroad", "Jobs", "Both"];
+
+const checklist = [
+  "Free to get started",
+  "Career and study guidance",
+  "You choose whether to seek counselling",
 ];
 
-const statuses = [
-  "Final-year student",
-  "Graduate",
-  "Working professional",
-];
+const labelClass = "mb-2 block text-sm font-semibold text-foreground";
 
-const interests = [
-  "Study abroad",
-  "Jobs",
-  "Both",
-];
+const inputClass =
+  "w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-text-muted hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10";
+
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+};
+
+const listVariants: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.1, delayChildren: 0.2 } },
+};
+
+const arrowVariants: Variants = {
+  rest: { x: 0 },
+  hover: { x: 4 },
+};
+
+function SelectField({
+  id,
+  name,
+  label,
+  placeholder,
+  options,
+}: {
+  id: string;
+  name: string;
+  label: string;
+  placeholder: string;
+  options: string[];
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className={labelClass}>
+        {label} <span className="text-error">*</span>
+      </label>
+      <div className="relative">
+        <select
+          id={id}
+          name={name}
+          required
+          defaultValue=""
+          className={`${inputClass} appearance-none pr-11`}
+        >
+          <option value="" disabled>
+            {placeholder}
+          </option>
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          size={17}
+          aria-hidden="true"
+          className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-text-muted"
+        />
+      </div>
+    </div>
+  );
+}
 
 export function LeadCaptureSection() {
   const [submitted, setSubmitted] = useState(false);
@@ -36,279 +104,279 @@ export function LeadCaptureSection() {
   }
 
   return (
-    <section
-      id="contact"
-      className="bg-background py-20 sm:py-24"
-    >
-      <div className="page-container">
-        <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
-          <div className="lg:sticky lg:top-28">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
-              Take your first step
-            </p>
-
-            <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Your next opportunity starts with one profile.
-            </h2>
-
-            <p className="mt-5 text-base leading-7 text-secondary-text">
-              Tell us a little about yourself. Start exploring career
-              preparation and study opportunities with CareerEdge.
-            </p>
-
-            <div className="mt-8 space-y-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="text-success" size={19} />
-                <span className="text-sm text-secondary-text">
-                  Free to get started
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="text-success" size={19} />
-                <span className="text-sm text-secondary-text">
-                  Career and study guidance
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="text-success" size={19} />
-                <span className="text-sm text-secondary-text">
-                  You choose whether to seek counselling
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-8 flex items-start gap-3 rounded-xl border border-border bg-white p-4">
-              <LockKeyhole
-                size={19}
-                className="mt-0.5 shrink-0 text-primary"
-              />
-              <p className="text-xs leading-5 text-secondary-text">
-                Your information should be handled responsibly. We will
-                connect this form to the platform's privacy and data
-                handling process before collecting real submissions.
+    <MotionConfig reducedMotion="user">
+      <section
+        id="contact"
+        className="scroll-mt-24 bg-background py-20 sm:py-24"
+      >
+        <div className="page-container">
+          <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+            {/* Left column */}
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.3 }}
+              className="lg:sticky lg:top-28"
+            >
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                Take your first step
               </p>
-            </div>
-          </div>
 
-          <div className="rounded-2xl border border-border bg-white p-6 shadow-sm sm:p-8">
-            {submitted ? (
-              <div
-                role="status"
-                className="flex min-h-[400px] flex-col items-center justify-center text-center"
+              <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                Your next opportunity starts with one profile.
+              </h2>
+
+              <p className="mt-5 text-base leading-7 text-secondary-text">
+                Tell us a little about yourself. Start exploring career
+                preparation and study opportunities with CareerEdge.
+              </p>
+
+              <motion.ul
+                variants={listVariants}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, amount: 0.5 }}
+                className="mt-8 space-y-4"
               >
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gold-soft text-primary">
-                  <CheckCircle2 size={32} />
-                </div>
-
-                <h3 className="mt-6 font-heading text-2xl font-bold text-foreground">
-                  Form demo completed
-                </h3>
-
-                <p className="mt-3 max-w-sm text-sm leading-6 text-secondary-text">
-                  The form interaction works, but it is not connected to
-                  a backend yet. No information has been sent or stored.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => setSubmitted(false)}
-                  className="mt-6 rounded-lg border border-border px-5 py-3 text-sm font-semibold text-primary transition hover:bg-background"
-                >
-                  Back to form
-                </button>
-              </div>
-            ) : (
-              <>
-                <div>
-                  <h3 className="font-heading text-xl font-bold text-foreground">
-                    Start your CareerEdge journey
-                  </h3>
-                  <p className="mt-2 text-sm text-secondary-text">
-                    Share a few details to get started.
-                  </p>
-                </div>
-
-                <form onSubmit={handleSubmit} className="mt-7 space-y-5">
-                  <div>
-                    <label
-                      htmlFor="lead-name"
-                      className="mb-2 block text-sm font-semibold text-foreground"
-                    >
-                      Full name <span className="text-error">*</span>
-                    </label>
-                    <input
-                      id="lead-name"
-                      name="name"
-                      type="text"
-                      placeholder="Enter your full name"
-                      autoComplete="name"
-                      required
-                      className="w-full rounded-lg border border-border bg-white px-4 py-3 text-sm outline-none transition placeholder:text-text-muted focus:border-primary focus:ring-2 focus:ring-primary/10"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="lead-mobile"
-                      className="mb-2 block text-sm font-semibold text-foreground"
-                    >
-                      Mobile number <span className="text-error">*</span>
-                    </label>
-
-                    <div className="flex overflow-hidden rounded-lg border border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10">
-                      <span className="flex items-center border-r border-border bg-surface-muted px-4 text-sm font-semibold text-foreground">
-                        +91
-                      </span>
-                      <input
-                        id="lead-mobile"
-                        name="mobile"
-                        type="tel"
-                        inputMode="numeric"
-                        autoComplete="tel-national"
-                        placeholder="10-digit mobile number"
-                        pattern="[6-9][0-9]{9}"
-                        title="Enter a valid 10-digit Indian mobile number."
-                        required
-                        className="min-w-0 flex-1 bg-white px-4 py-3 text-sm outline-none placeholder:text-text-muted"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="lead-city"
-                      className="mb-2 block text-sm font-semibold text-foreground"
-                    >
-                      City <span className="text-error">*</span>
-                    </label>
-                    <select
-                      id="lead-city"
-                      name="city"
-                      required
-                      defaultValue=""
-                      className="w-full rounded-lg border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                    >
-                      <option value="" disabled>
-                        Select your city
-                      </option>
-                      {cities.map((city) => (
-                        <option key={city} value={city}>
-                          {city}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="lead-status"
-                      className="mb-2 block text-sm font-semibold text-foreground"
-                    >
-                      Current status <span className="text-error">*</span>
-                    </label>
-                    <select
-                      id="lead-status"
-                      name="status"
-                      required
-                      defaultValue=""
-                      className="w-full rounded-lg border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                    >
-                      <option value="" disabled>
-                        Select your current status
-                      </option>
-                      {statuses.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="lead-interest"
-                      className="mb-2 block text-sm font-semibold text-foreground"
-                    >
-                      What are you interested in?{" "}
-                      <span className="text-error">*</span>
-                    </label>
-                    <select
-                      id="lead-interest"
-                      name="interest"
-                      required
-                      defaultValue=""
-                      className="w-full rounded-lg border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
-                    >
-                      <option value="" disabled>
-                        Select your interest
-                      </option>
-                      {interests.map((interest) => (
-                        <option key={interest} value={interest}>
-                          {interest}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-4 border-t border-border pt-5">
-                    <label className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        name="requiredConsent"
-                        checked={requiredConsent}
-                        onChange={(event) =>
-                          setRequiredConsent(event.target.checked)
-                        }
-                        required
-                        className="mt-1 h-4 w-4 shrink-0 accent-[#7a0f1f]"
-                      />
-                      <span className="text-xs leading-5 text-secondary-text">
-                        I agree to the processing of my information for
-                        the purpose of responding to my enquiry, as
-                        described in the Privacy Policy.{" "}
-                        <span className="text-error">*</span>
-                      </span>
-                    </label>
-
-                    <label className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        name="marketingConsent"
-                        checked={marketingConsent}
-                        onChange={(event) =>
-                          setMarketingConsent(event.target.checked)
-                        }
-                        className="mt-1 h-4 w-4 shrink-0 accent-[#7a0f1f]"
-                      />
-                      <span className="text-xs leading-5 text-secondary-text">
-                        I would also like to receive optional updates
-                        about CareerEdge, career opportunities and
-                        events.
-                      </span>
-                    </label>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={!requiredConsent}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3.5 text-sm font-bold text-white transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+                {checklist.map((text) => (
+                  <motion.li
+                    key={text}
+                    variants={fadeUp}
+                    className="flex items-center gap-3"
                   >
-                    Get Started
-                    <ArrowRight size={17} />
-                  </button>
+                    <CheckCircle2
+                      className="shrink-0 text-success"
+                      size={19}
+                      aria-hidden="true"
+                    />
+                    <span className="text-sm text-secondary-text">{text}</span>
+                  </motion.li>
+                ))}
+              </motion.ul>
 
-                  <p className="text-center text-xs leading-5 text-text-muted">
-                    Required fields are marked with an asterisk.
-                    Optional updates are separate from your enquiry consent.
-                  </p>
-                </form>
-              </>
-            )}
+              <div className="mt-8 flex items-start gap-3 rounded-2xl border border-gold/40 bg-gold-soft/40 p-4">
+                <LockKeyhole
+                  size={19}
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 text-primary"
+                />
+                <p className="text-xs leading-5 text-secondary-text">
+                  Your information should be handled responsibly. We will
+                  connect this form to the platform&apos;s privacy and data
+                  handling process before collecting real submissions.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Form card */}
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.15 }}
+              className="relative overflow-hidden rounded-3xl border border-border bg-white p-6 shadow-xl shadow-black/5 sm:p-8"
+            >
+              {/* Accent line */}
+              <div
+                aria-hidden="true"
+                className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-gold to-primary"
+              />
+
+              <AnimatePresence mode="wait" initial={false}>
+                {submitted ? (
+                  <motion.div
+                    key="success"
+                    role="status"
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -16 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    className="flex min-h-[400px] flex-col items-center justify-center text-center"
+                  >
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 260,
+                        damping: 16,
+                        delay: 0.15,
+                      }}
+                      className="flex h-16 w-16 items-center justify-center rounded-full bg-gold-soft text-primary"
+                    >
+                      <CheckCircle2 size={32} aria-hidden="true" />
+                    </motion.div>
+
+                    <h3 className="mt-6 font-heading text-2xl font-bold text-foreground">
+                      Form demo completed
+                    </h3>
+
+                    <p className="mt-3 max-w-sm text-sm leading-6 text-secondary-text">
+                      The form interaction works, but it is not connected to a
+                      backend yet. No information has been sent or stored.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => setSubmitted(false)}
+                      className="mt-6 rounded-xl border border-border px-5 py-3 text-sm font-semibold text-primary transition hover:border-primary/40 hover:bg-background"
+                    >
+                      Back to form
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="form"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0, y: -16 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                  >
+                    <div>
+                      <h3 className="font-heading text-xl font-bold text-foreground">
+                        Start your CareerEdge journey
+                      </h3>
+                      <p className="mt-2 text-sm text-secondary-text">
+                        Share a few details to get started.
+                      </p>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+                      <div>
+                        <label htmlFor="lead-name" className={labelClass}>
+                          Full name <span className="text-error">*</span>
+                        </label>
+                        <input
+                          id="lead-name"
+                          name="name"
+                          type="text"
+                          placeholder="Enter your full name"
+                          autoComplete="name"
+                          required
+                          className={inputClass}
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="lead-mobile" className={labelClass}>
+                          Mobile number <span className="text-error">*</span>
+                        </label>
+
+                        <div className="flex overflow-hidden rounded-xl border border-border bg-white transition hover:border-primary/40 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
+                          <span className="flex items-center border-r border-border bg-surface-muted px-4 text-sm font-semibold text-foreground">
+                            +91
+                          </span>
+                          <input
+                            id="lead-mobile"
+                            name="mobile"
+                            type="tel"
+                            inputMode="numeric"
+                            autoComplete="tel-national"
+                            placeholder="10-digit mobile number"
+                            pattern="[6-9][0-9]{9}"
+                            title="Enter a valid 10-digit Indian mobile number."
+                            required
+                            className="min-w-0 flex-1 bg-white px-4 py-3 text-sm outline-none placeholder:text-text-muted"
+                          />
+                        </div>
+                      </div>
+
+                      <SelectField
+                        id="lead-city"
+                        name="city"
+                        label="City"
+                        placeholder="Select your city"
+                        options={cities}
+                      />
+
+                      <SelectField
+                        id="lead-status"
+                        name="status"
+                        label="Current status"
+                        placeholder="Select your current status"
+                        options={statuses}
+                      />
+
+                      <SelectField
+                        id="lead-interest"
+                        name="interest"
+                        label="What are you interested in?"
+                        placeholder="Select your interest"
+                        options={interests}
+                      />
+
+                      <div className="space-y-4 border-t border-border pt-5">
+                        <label className="flex cursor-pointer items-start gap-3">
+                          <input
+                            type="checkbox"
+                            name="requiredConsent"
+                            checked={requiredConsent}
+                            onChange={(event) =>
+                              setRequiredConsent(event.target.checked)
+                            }
+                            required
+                            className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-[#7a0f1f]"
+                          />
+                          <span className="text-xs leading-5 text-secondary-text">
+                            I agree to the processing of my information for the
+                            purpose of responding to my enquiry, as described in
+                            the Privacy Policy.{" "}
+                            <span className="text-error">*</span>
+                          </span>
+                        </label>
+
+                        <label className="flex cursor-pointer items-start gap-3">
+                          <input
+                            type="checkbox"
+                            name="marketingConsent"
+                            checked={marketingConsent}
+                            onChange={(event) =>
+                              setMarketingConsent(event.target.checked)
+                            }
+                            className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-[#7a0f1f]"
+                          />
+                          <span className="text-xs leading-5 text-secondary-text">
+                            I would also like to receive optional updates about
+                            CareerEdge, career opportunities and events.
+                          </span>
+                        </label>
+                      </div>
+
+                      <motion.button
+                        type="submit"
+                        disabled={!requiredConsent}
+                        initial="rest"
+                        whileHover={requiredConsent ? "hover" : undefined}
+                        whileTap={requiredConsent ? { scale: 0.98 } : undefined}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                      >
+                        Get Started
+                        <motion.span
+                          variants={arrowVariants}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 20,
+                          }}
+                          className="inline-flex"
+                        >
+                          <ArrowRight size={17} aria-hidden="true" />
+                        </motion.span>
+                      </motion.button>
+
+                      <p className="text-center text-xs leading-5 text-text-muted">
+                        Required fields are marked with an asterisk. Optional
+                        updates are separate from your enquiry consent.
+                      </p>
+                    </form>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </MotionConfig>
   );
 }

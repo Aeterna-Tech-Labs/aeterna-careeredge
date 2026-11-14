@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import {
+  AnimatePresence,
+  MotionConfig,
+  motion,
+  type Variants,
+} from "motion/react";
 
 const faqs = [
   {
@@ -46,91 +52,145 @@ const faqs = [
   },
 ];
 
+const listVariants: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07 } },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" } },
+};
+
+const headerVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+};
+
 export function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section className="bg-white py-20 sm:py-24">
-      <div className="page-container">
-        <div className="grid gap-12 lg:grid-cols-[0.75fr_1.25fr]">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
-              Frequently asked questions
-            </p>
-
-            <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Got questions? We've got answers.
-            </h2>
-
-            <p className="mt-5 text-base leading-7 text-secondary-text">
-              Find out more about CareerEdge, its tools and how to begin your
-              career preparation journey.
-            </p>
-
-            <p className="mt-7 text-sm text-secondary-text">
-              Still have questions?
-            </p>
-
-            <a
-              href="#contact"
-              className="mt-2 inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline"
+    <MotionConfig reducedMotion="user">
+      <section className="bg-white py-20 sm:py-24">
+        <div className="page-container">
+          <div className="grid gap-12 lg:grid-cols-[0.75fr_1.25fr]">
+            <motion.div
+              variants={headerVariants}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.3 }}
             >
-              Get in touch
-              <span aria-hidden="true">→</span>
-            </a>
-          </div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                Frequently asked questions
+              </p>
 
-          <div className="divide-y divide-border border-y border-border">
-            {faqs.map((faq, index) => {
-              const isOpen = openIndex === index;
-              const answerId = `faq-answer-${index}`;
-              const buttonId = `faq-question-${index}`;
+              <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                Got questions? We&apos;ve got answers.
+              </h2>
 
-              return (
-                <div key={faq.question} className="py-1">
-                  <h3>
-                    <button
-                      id={buttonId}
-                      type="button"
-                      aria-expanded={isOpen}
-                      aria-controls={answerId}
-                      onClick={() => setOpenIndex(isOpen ? null : index)}
-                      className="flex w-full items-center justify-between gap-5 py-5 text-left"
-                    >
-                      <span className="font-heading text-sm font-semibold leading-6 text-foreground sm:text-base">
-                        {faq.question}
-                      </span>
+              <p className="mt-5 text-base leading-7 text-secondary-text">
+                Find out more about CareerEdge, its tools and how to begin your
+                career preparation journey.
+              </p>
 
-                      <span
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition ${
-                          isOpen
-                            ? "rotate-180 bg-primary text-white"
-                            : "bg-surface-muted text-primary"
-                        }`}
+              <p className="mt-7 text-sm text-secondary-text">
+                Still have questions?
+              </p>
+
+              <a
+                href="#contact"
+                className="group mt-2 inline-flex items-center gap-2 text-sm font-bold text-primary hover:underline"
+              >
+                Get in touch
+                <span
+                  aria-hidden="true"
+                  className="transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none"
+                >
+                  →
+                </span>
+              </a>
+            </motion.div>
+
+            <motion.div
+              variants={listVariants}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.1 }}
+              className="divide-y divide-border border-y border-border"
+            >
+              {faqs.map((faq, index) => {
+                const isOpen = openIndex === index;
+                const answerId = `faq-answer-${index}`;
+                const buttonId = `faq-question-${index}`;
+
+                return (
+                  <motion.div
+                    key={faq.question}
+                    variants={itemVariants}
+                    className="py-1"
+                  >
+                    <h3>
+                      <button
+                        id={buttonId}
+                        type="button"
+                        aria-expanded={isOpen}
+                        aria-controls={answerId}
+                        onClick={() => setOpenIndex(isOpen ? null : index)}
+                        className="group flex w-full items-center justify-between gap-5 rounded-lg py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                       >
-                        <ChevronDown size={17} />
-                      </span>
-                    </button>
-                  </h3>
+                        <span
+                          className={`font-heading text-sm font-semibold leading-6 transition-colors duration-200 group-hover:text-primary sm:text-base ${
+                            isOpen ? "text-primary" : "text-foreground"
+                          }`}
+                        >
+                          {faq.question}
+                        </span>
 
-                  {isOpen && (
-                    <div
-                      id={answerId}
-                      role="region"
-                      aria-labelledby={buttonId}
-                      className="pb-5 pr-10"
-                    >
-                      <p className="text-sm leading-7 text-secondary-text">
-                        {faq.answer}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                        <motion.span
+                          animate={{ rotate: isOpen ? 180 : 0 }}
+                          whileHover={{ scale: 1.1 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 20,
+                          }}
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors duration-200 ${
+                            isOpen
+                              ? "bg-primary text-white"
+                              : "bg-surface-muted text-primary"
+                          }`}
+                        >
+                          <ChevronDown size={17} />
+                        </motion.span>
+                      </button>
+                    </h3>
+
+                    <AnimatePresence initial={false}>
+                      {isOpen && (
+                        <motion.div
+                          id={answerId}
+                          role="region"
+                          aria-labelledby={buttonId}
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3, ease: "easeInOut" }}
+                          className="overflow-hidden"
+                        >
+                          <p className="pb-5 pr-10 text-sm leading-7 text-secondary-text">
+                            {faq.answer}
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </MotionConfig>
   );
 }

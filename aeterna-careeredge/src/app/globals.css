@@ -162,3 +162,7 @@
     letter-spacing: -0.025em;
   }
 }
+
+html {
+  scroll-behavior: smooth;
+}
