@@ -29,7 +29,7 @@ const principles = [
 
 export function TrustSection() {
   return (
-    <section id="about" className="bg-white py-20 sm:py-24 scroll-mt-24">
+    <section id="about" className="bg-background py-20 sm:py-24 scroll-mt-24">
       <div className="page-container">
         <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
           <div>
@@ -51,7 +51,7 @@ export function TrustSection() {
               journey.
             </p>
 
-            <div className="mt-7 flex items-center gap-3 rounded-xl border border-border bg-background p-4">
+            <div className="mt-7 flex items-center gap-3 rounded-xl border border-border bg-white p-4">
               <CheckCircle2 className="shrink-0 text-success" size={21} />
               <p className="text-sm font-semibold text-foreground">
                 Your profile. Your decisions. Your future.
@@ -66,9 +66,9 @@ export function TrustSection() {
               return (
                 <article
                   key={principle.title}
-                  className="flex gap-5 rounded-2xl border border-border bg-background p-6 transition hover:shadow-md sm:p-7"
+                  className="flex gap-5 rounded-2xl border border-border bg-white p-6 transition hover:shadow-md sm:p-7"
                 >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-background text-primary shadow-sm border border-gold">
                     <Icon size={23} />
                   </div>
 

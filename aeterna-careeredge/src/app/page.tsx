@@ -14,9 +14,9 @@ export default function Home() {
   return (
     <MarketingLayout>
       <HeroSection />
+      <DestinationsSection />
       <FeaturesSection />
       <HowItWorksSection />
-      <DestinationsSection />
       <SampleOutputSection />
       <TrustSection />
       <CollegesSection />

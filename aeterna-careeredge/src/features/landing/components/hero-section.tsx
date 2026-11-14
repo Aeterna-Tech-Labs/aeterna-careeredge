@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   MapPin,
   Rocket,
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "motion/react";
@@ -33,11 +34,15 @@ const textVarients = {
   rest: { x: 0, transition: spring },
   hover: { x: 2, transition: spring },
 };
+const imageVariants = {
+  rest: { scale: 1, transition: spring },
+  hover: { scale: 1.06, transition: spring },
+};
 
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden bg-background">
-      <div className="page-container grid min-h-[800px] items-center gap-12 py-15 lg:grid-cols-2 lg:py-10">
+      <div className="page-container grid min-h-[730px] items-center gap-12 lg:grid-cols-2 lg:py-10">
         {/* Hero content */}
         <div className="relative z-10">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-primary">
@@ -133,61 +138,93 @@ export function HeroSection() {
         </div>
 
         {/* Hero visual */}
-        <div className="relative mx-auto w-full max-w-xl">
-          {/* Subtle architectural backdrop */}
+        <motion.div
+          initial="rest"
+          whileHover="hover"
+          className="relative mx-auto w-full max-w-[472px]"
+        >
           <div className="absolute -right-8 -top-8 h-64 w-64 rounded-full bg-gold-soft/70 blur-3xl" />
 
-          <div className="relative overflow-hidden rounded-3xl border border-border bg-white p-3 shadow-xl">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
+          {/* Image box: overflow-hidden stays here, with nothing else inside */}
+          <div className="relative h-[480px] w-full overflow-hidden rounded-3xl shadow-xl">
+            <motion.div variants={imageVariants} className="absolute inset-0">
               <Image
-                src="/assets/images/hero-students.webp"
+                src="/assets/images/hero-section/group-friends.webp"
                 alt="Indian college students collaborating on their career goals"
                 fill
                 priority
-                sizes="(max-width: 1024px) 100vw, 50vw"
+                sizes="(max-width: 472px) 100vw, 472px"
                 className="object-cover"
               />
-
-              <div className="absolute inset-0 bg-gradient-to-t from-primary-dark/50 via-transparent to-transparent" />
-
-              <div className="absolute bottom-5 left-5 right-5 text-white">
-                <p className="font-heading text-xl font-bold">
-                  Your Career. Your Future.
-                </p>
-                <p className="mt-1 text-sm text-white/85">
-                  One Passport. Many Possibilities.
-                </p>
-              </div>
-            </div>
-
-            {/* Product preview strip */}
-            <div className="grid grid-cols-3 gap-2 p-3">
-              <div className="rounded-xl bg-surface-muted p-3">
-                <p className="text-[10px] font-medium text-secondary-text">
-                  CAREER
-                </p>
-                <p className="mt-1 text-xs font-bold text-primary">Passport</p>
-              </div>
-
-              <div className="rounded-xl bg-surface-muted p-3">
-                <p className="text-[10px] font-medium text-secondary-text">
-                  AI
-                </p>
-                <p className="mt-1 text-xs font-bold text-primary">Resume</p>
-              </div>
-
-              <div className="rounded-xl bg-surface-muted p-3">
-                <p className="text-[10px] font-medium text-secondary-text">
-                  CAREER
-                </p>
-                <p className="mt-1 text-xs font-bold text-primary">Roadmap</p>
-              </div>
-            </div>
+            </motion.div>
           </div>
 
-          {/* Decorative Karnataka-inspired accent */}
-          <div className="absolute -bottom-5 -left-5 -z-10 h-28 w-28 rounded-2xl border-2 border-gold/60" />
-        </div>
+          {/* Card: sibling of the image box, so it can overlap the corner without being clipped */}
+          <div className="absolute -bottom-10 left-0 w-[calc(100%-1rem)] rounded-2xl bg-white p-4 shadow-[0_8px_30px_rgba(0,0,0,0.12)] ring-1 ring-black/5 sm:-left-10 sm:w-[380px]">
+            {/* Top row */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <Image
+                  src="/assets/images/avatar/anuj.webp"
+                  alt="Anuj Dandavate"
+                  width={44}
+                  height={44}
+                  className="h-11 w-11 shrink-0 rounded-full object-cover ring-2 ring-white"
+                />
+                <div className="min-w-0">
+                  <p className="truncate font-heading text-lg font-bold leading-tight text-foreground">
+                    Anuj Dandavate
+                  </p>
+                  <p className="truncate text-sm text-secondary-text">
+                    VTU Belagavi • CSE &apos;25
+                  </p>
+                </div>
+              </div>
+
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-300 bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-950">
+                <Star size={14} strokeWidth={2} aria-hidden="true" />
+                KSSF Verified
+              </span>
+            </div>
+
+            <div className="my-3.5 h-px bg-black/5" />
+
+            {/* Passport strength */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-400 text-sm font-bold text-amber-950">
+                  72%
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">
+                    Passport Strength
+                  </p>
+                  <p className="truncate text-sm text-secondary-text">
+                    Top 8% ready for Bengaluru drives
+                  </p>
+                </div>
+              </div>
+
+              <span className="shrink-0 rounded-md bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700">
+                96% Match
+              </span>
+            </div>
+
+            {/* Bottom strip */}
+            <div className="mt-3.5 flex items-center justify-between rounded-xl bg-red-50 px-3.5 py-2.5">
+              <div className="flex items-center gap-2 text-xs font-medium text-red-950">
+                <CheckCircle2 size={15} strokeWidth={1.75} aria-hidden="true" />
+                SOP &amp; ATS Resume Ready
+              </div>
+              <button
+                type="button"
+                className="text-xs font-bold text-rose-900 transition-colors hover:text-rose-700"
+              >
+                Preview →
+              </button>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </section>
   );
