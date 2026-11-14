@@ -6,7 +6,6 @@ import { ArrowRight, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { Libre_Baskerville } from "next/font/google";
-import { label } from "motion/react-client";
 
 const brandFont = Libre_Baskerville({
   subsets: ["latin"],
