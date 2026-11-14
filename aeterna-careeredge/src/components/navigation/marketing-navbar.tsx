@@ -1,9 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowRight, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { Libre_Baskerville } from "next/font/google";
+
+const brandFont = Libre_Baskerville({
+  subsets: ["latin"],
+  weight: "700",
+});
 
 const links = [
   { label: "Home", href: "/" },
@@ -14,44 +21,101 @@ const links = [
 
 export function MarketingNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeHref, setActiveHref] = useState("/");
+
+  useEffect(() => {
+    const updateActiveLink = () => {
+      const sectionLinks = links.filter((link) => link.href.includes("#"));
+
+      const activeSection = sectionLinks
+        .map((link) => ({
+          href: link.href,
+          top: document
+            .querySelector(link.href.slice(1))
+            ?.getBoundingClientRect().top,
+        }))
+        .filter((section) => section.top !== undefined && section.top <= 120)
+        .at(-1);
+
+      setActiveHref(activeSection?.href ?? "/");
+    };
+
+    updateActiveLink();
+    window.addEventListener("scroll", updateActiveLink, { passive: true });
+    window.addEventListener("hashchange", updateActiveLink);
+
+    return () => {
+      window.removeEventListener("scroll", updateActiveLink);
+      window.removeEventListener("hashchange", updateActiveLink);
+    };
+  }, []);
+
+  const navLinkClass = (href: string) =>
+    `text-sm transition-colors hover:text-gold ${
+      activeHref === href
+        ? "font-bold text-gold underline underline-offset-8"
+        : "font-medium text-white/85"
+    }`;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
-      <div className="page-container flex h-20 items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-lg font-bold text-white">
-            A
-          </div>
-          <div>
-            <p className="font-heading text-lg font-bold text-foreground">
+    <header className="sticky top-0 z-40 border-b border-gold bg-[#7A0F1F]/95 shadow-md shadow-black/10">
+      <div className="page-container flex h-20 items-center justify-between gap-5">
+        <Link
+          href="/"
+          aria-label="CareerEdge home"
+          className="group inline-flex shrink-0 items-center gap-2"
+        >
+          <Image
+            src="/assets/logos/company-logo.webp"
+            alt=""
+            width="60"
+            height="60"
+            priority
+            className="h-10 w-10 shrink-0 object-contain"
+          />
+          <div className="flex min-w-0 flex-col justify-center">
+            <span
+              className={`${brandFont.className} bg-gradient-to-b from-[#FFD83D] via-[#F6B51C] to-[#E58F0C] bg-clip-text text-xl font-bold uppercase leading-none tracking-tight text-transparent`}
+            >
               Aeterna
-            </p>
-            <p className="text-xs text-secondary-text">CareerEdge</p>
+            </span>
+            <span className="mt-1.5 text-[10px] font-medium leading-none tracking-[0.3em] text-white/90">
+              CareerEdge
+            </span>
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className="hidden flex-1 items-center justify-center gap-7 md:flex">
           {links.map((link) => (
             <Link
               key={link.label}
               href={link.href}
-              className="text-sm font-medium text-secondary-text transition hover:text-primary"
+              className={navLinkClass(link.href)}
+              aria-current={activeHref === link.href ? "location" : undefined}
             >
               {link.label}
             </Link>
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden shrink-0 items-center gap-6 md:flex">
           <Link
             href="/login"
-            className="text-sm font-semibold text-primary transition hover:text-primary-dark"
+            className="rounded-md text-sm font-semibold text-white/90 transition-colors hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark"
           >
             Log in
           </Link>
 
-          <Link href="/signup">
-            <Button size="md">Get Started</Button>
+          <Link
+            href="/signup"
+            className="group inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-5 py-2.5 text-sm font-bold text-primary-dark shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gold-soft hover:shadow-md active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark"
+          >
+            Get Started
+            <ArrowRight
+              size={16}
+              aria-hidden="true"
+              className="transition-transform duration-200 motion-reduce:transition-none group-hover:translate-x-1 group-focus-visible:translate-x-1"
+            />
           </Link>
         </div>
 
@@ -60,21 +124,22 @@ export function MarketingNavbar() {
           aria-label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen(!menuOpen)}
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-foreground hover:bg-surface-muted md:hidden"
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-white transition hover:bg-white/10 md:hidden"
         >
           {menuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
 
       {menuOpen && (
-        <nav className="border-t border-border bg-surface px-6 py-5 md:hidden">
-          <div className="flex flex-col gap-4">
+        <nav className="border-t border-white/10 bg-[#7A0F1F] px-6 py-5 md:hidden">
+          <div className="flex flex-col gap-5">
             {links.map((link) => (
               <Link
                 key={link.label}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                className="text-sm font-medium text-secondary-text hover:text-primary"
+                className={navLinkClass(link.href)}
+                aria-current={activeHref === link.href ? "location" : undefined}
               >
                 {link.label}
               </Link>
@@ -87,7 +152,12 @@ export function MarketingNavbar() {
             </Link>
 
             <Link href="/signup" onClick={() => setMenuOpen(false)}>
-              <Button fullWidth>Get Started</Button>
+              <Button
+                className="border-2 border-border-strong font-bold text-[#7A0F1F] hover:bg-amber-200"
+                fullWidth
+              >
+                Get Started
+              </Button>
             </Link>
           </div>
         </nav>

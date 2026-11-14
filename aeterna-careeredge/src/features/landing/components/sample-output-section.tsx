@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -113,9 +112,9 @@ function SopPreview() {
             Introduction
           </h4>
           <p className="mt-2 text-xs leading-6 text-secondary-text">
-            My interest in technology developed through my academic journey
-            and the practical projects that helped me understand how software
-            can solve real-world problems.
+            My interest in technology developed through my academic journey and
+            the practical projects that helped me understand how software can
+            solve real-world problems.
           </p>
         </div>
 
@@ -182,8 +181,8 @@ function LinkedInPreview() {
           <p className="mt-2 text-xs leading-6 text-secondary-text">
             I am a computer science student passionate about software
             development and learning through hands-on projects. I enjoy
-            exploring new technologies, improving my problem-solving skills
-            and connecting with people who build useful digital products.
+            exploring new technologies, improving my problem-solving skills and
+            connecting with people who build useful digital products.
           </p>
         </div>
 
@@ -211,7 +210,7 @@ export function SampleOutputSection() {
   const [activeTab, setActiveTab] = useState<TabId>("resume");
 
   return (
-    <section className="bg-background py-20 sm:py-24">
+    <section className="bg-white py-20 sm:py-24">
       <div className="page-container">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
@@ -223,8 +222,8 @@ export function SampleOutputSection() {
           </h2>
 
           <p className="mt-5 text-base leading-7 text-secondary-text">
-            Explore examples of the professional documents and profiles you
-            can work towards with CareerEdge.
+            Explore examples of the professional documents and profiles you can
+            work towards with CareerEdge.
           </p>
         </div>
 
@@ -273,10 +272,7 @@ export function SampleOutputSection() {
         </div>
 
         <div className="mt-8 flex items-start justify-center gap-2 text-center">
-          <CheckCircle2
-            size={17}
-            className="mt-0.5 shrink-0 text-success"
-          />
+          <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-success" />
           <p className="max-w-xl text-xs leading-5 text-secondary-text">
             These are illustrative examples, not real student profiles or
             generated results. You review and personalise your content.
