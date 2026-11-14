@@ -58,7 +58,19 @@ export function MarketingNavbar() {
     }`;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-gold bg-[#7A0F1F]/95 shadow-md shadow-black/10">
+    <header className="sticky top-0 z-40 bg-gradient-to-r from-[#5C0914]/95 via-[#7A0F1F]/95 to-[#9A1B2E]/95 shadow-lg shadow-black/20 backdrop-blur-md">
+      {/* Soft gold glow, top right */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_right,rgba(246,181,28,0.18),transparent_55%)]"
+      />
+
+      {/* Gold line that fades out at both ends (replaces border-b) */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-gold to-transparent"
+      />
+
       <div className="page-container flex h-20 items-center justify-between gap-5">
         <Link
           href="/"
@@ -131,7 +143,7 @@ export function MarketingNavbar() {
       </div>
 
       {menuOpen && (
-        <nav className="border-t border-white/10 bg-[#7A0F1F] px-6 py-5 md:hidden">
+        <nav className="border-t border-gold/20 bg-gradient-to-b from-[#7A0F1F] to-[#5C0914] px-6 py-5 md:hidden">
           <div className="flex flex-col gap-5">
             {links.map((link) => (
               <Link

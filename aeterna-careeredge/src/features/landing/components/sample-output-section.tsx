@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import {
   FileText,
   BookOpen,
@@ -8,6 +8,12 @@ import {
   CheckCircle2,
   Sparkles,
 } from "lucide-react";
+import {
+  AnimatePresence,
+  MotionConfig,
+  motion,
+  type Variants,
+} from "motion/react";
 
 const tabs = [
   { id: "resume", label: "Resume", icon: FileText },
@@ -17,9 +23,17 @@ const tabs = [
 
 type TabId = (typeof tabs)[number]["id"];
 
+const cardClass =
+  "mx-auto max-w-xl overflow-hidden rounded-2xl border border-border bg-white shadow-xl shadow-black/5";
+
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: "easeOut" } },
+};
+
 function ResumePreview() {
   return (
-    <div className="mx-auto max-w-xl rounded-xl border border-border bg-white p-6 shadow-lg sm:p-8">
+    <div className={`${cardClass} p-6 sm:p-8`}>
       <div className="border-b border-border pb-5">
         <p className="font-heading text-2xl font-bold text-primary">
           Priya Sharma
@@ -93,7 +107,7 @@ function ResumePreview() {
 
 function SopPreview() {
   return (
-    <div className="mx-auto max-w-xl rounded-xl border border-border bg-white p-6 shadow-lg sm:p-8">
+    <div className={`${cardClass} p-6 sm:p-8`}>
       <div className="flex items-center justify-between border-b border-border pb-4">
         <div>
           <p className="font-heading text-lg font-bold text-primary">
@@ -103,7 +117,7 @@ function SopPreview() {
             Sample personal statement
           </p>
         </div>
-        <BookOpen className="text-primary" size={24} />
+        <BookOpen className="text-primary" size={24} aria-hidden="true" />
       </div>
 
       <div className="mt-6 space-y-5 text-left">
@@ -139,9 +153,9 @@ function SopPreview() {
           </p>
         </div>
 
-        <div className="rounded-lg bg-gold-soft p-4">
+        <div className="rounded-xl border border-gold/40 bg-gold-soft p-4">
           <div className="flex items-center gap-2 text-primary">
-            <Sparkles size={15} />
+            <Sparkles size={15} aria-hidden="true" />
             <span className="text-xs font-semibold">Writing guidance</span>
           </div>
           <p className="mt-2 text-xs leading-5 text-primary-dark">
@@ -156,8 +170,8 @@ function SopPreview() {
 
 function LinkedInPreview() {
   return (
-    <div className="mx-auto max-w-xl overflow-hidden rounded-xl border border-border bg-white shadow-lg">
-      <div className="h-24 bg-primary sm:h-32" />
+    <div className={cardClass}>
+      <div className="h-24 bg-gradient-to-r from-[#5C0914] via-primary to-[#9A1B2E] sm:h-32" />
 
       <div className="px-6 pb-7 text-left sm:px-8">
         <div className="-mt-9 flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-gold-soft font-heading text-xl font-bold text-primary sm:-mt-11 sm:h-20 sm:w-20 sm:text-2xl">
@@ -206,79 +220,156 @@ function LinkedInPreview() {
   );
 }
 
+const previews: Record<TabId, () => React.JSX.Element> = {
+  resume: ResumePreview,
+  sop: SopPreview,
+  linkedin: LinkedInPreview,
+};
+
 export function SampleOutputSection() {
   const [activeTab, setActiveTab] = useState<TabId>("resume");
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const ActivePreview = previews[activeTab];
+
+  // Arrow keys move between tabs, as expected for role="tablist"
+  function handleKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) {
+    let next = index;
+    if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
+    else if (event.key === "ArrowLeft")
+      next = (index - 1 + tabs.length) % tabs.length;
+    else return;
+
+    event.preventDefault();
+    const nextTab = tabs[next];
+    setActiveTab(nextTab.id);
+    tabRefs.current[nextTab.id]?.focus();
+  }
 
   return (
-    <section className="bg-white py-20 sm:py-24">
-      <div className="page-container">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
-            See what you can create
-          </p>
+    <MotionConfig reducedMotion="user">
+      <section className="relative isolate overflow-hidden bg-white py-20 sm:py-24">
+        {/* Soft background glow */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,rgba(246,181,28,0.08),transparent_55%)]"
+        />
 
-          <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Your story, presented with confidence.
-          </h2>
-
-          <p className="mt-5 text-base leading-7 text-secondary-text">
-            Explore examples of the professional documents and profiles you can
-            work towards with CareerEdge.
-          </p>
-        </div>
-
-        <div className="mx-auto mt-10 max-w-3xl">
-          <div
-            role="tablist"
-            aria-label="Sample output types"
-            className="flex flex-wrap justify-center gap-2 rounded-xl border border-border bg-white p-2"
+        <div className="page-container">
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.3 }}
+            className="mx-auto max-w-2xl text-center"
           >
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+              See what you can create
+            </p>
 
-              return (
-                <button
-                  key={tab.id}
-                  id={`sample-tab-${tab.id}`}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  aria-controls="sample-output-panel"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 rounded-lg px-4 py-3 text-xs font-semibold transition sm:text-sm ${
-                    isActive
-                      ? "bg-primary text-white shadow-sm"
-                      : "text-secondary-text hover:bg-surface-muted hover:text-primary"
-                  }`}
+            <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              Your story, presented with confidence.
+            </h2>
+
+            <p className="mt-5 text-base leading-7 text-secondary-text">
+              Explore examples of the professional documents and profiles you
+              can work towards with CareerEdge.
+            </p>
+          </motion.div>
+
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.15 }}
+            className="mx-auto mt-10 max-w-3xl"
+          >
+            <div
+              role="tablist"
+              aria-label="Sample output types"
+              className="mx-auto flex w-fit max-w-full flex-wrap justify-center gap-1 rounded-2xl border border-border bg-white p-1.5 shadow-sm"
+            >
+              {tabs.map((tab, index) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+
+                return (
+                  <button
+                    key={tab.id}
+                    ref={(el) => {
+                      tabRefs.current[tab.id] = el;
+                    }}
+                    id={`sample-tab-${tab.id}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-controls="sample-output-panel"
+                    tabIndex={isActive ? 0 : -1}
+                    onClick={() => setActiveTab(tab.id)}
+                    onKeyDown={(event) => handleKeyDown(event, index)}
+                    className={`relative flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:text-sm ${
+                      isActive
+                        ? "text-white"
+                        : "text-secondary-text hover:bg-surface-muted hover:text-primary"
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="sample-tab-pill"
+                        aria-hidden="true"
+                        className="absolute inset-0 rounded-xl bg-primary shadow-md shadow-primary/20"
+                        transition={{
+                          type: "spring",
+                          stiffness: 380,
+                          damping: 30,
+                        }}
+                      />
+                    )}
+                    <span className="relative z-10 flex items-center gap-2">
+                      <Icon size={16} aria-hidden="true" />
+                      {tab.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div
+              id="sample-output-panel"
+              role="tabpanel"
+              aria-labelledby={`sample-tab-${activeTab}`}
+              className="mt-7"
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -14 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
                 >
-                  <Icon size={16} />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
+                  <ActivePreview />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </motion.div>
 
-          <div
-            id="sample-output-panel"
-            role="tabpanel"
-            aria-labelledby={`sample-tab-${activeTab}`}
-            className="mt-7"
-          >
-            {activeTab === "resume" && <ResumePreview />}
-            {activeTab === "sop" && <SopPreview />}
-            {activeTab === "linkedin" && <LinkedInPreview />}
+          <div className="mt-8 flex items-start justify-center gap-2 text-center">
+            <CheckCircle2
+              size={17}
+              aria-hidden="true"
+              className="mt-0.5 shrink-0 text-success"
+            />
+            <p className="max-w-xl text-xs leading-5 text-secondary-text">
+              These are illustrative examples, not real student profiles or
+              generated results. You review and personalise your content.
+            </p>
           </div>
         </div>
-
-        <div className="mt-8 flex items-start justify-center gap-2 text-center">
-          <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-success" />
-          <p className="max-w-xl text-xs leading-5 text-secondary-text">
-            These are illustrative examples, not real student profiles or
-            generated results. You review and personalise your content.
-          </p>
-        </div>
-      </div>
-    </section>
+      </section>
+    </MotionConfig>
   );
 }
