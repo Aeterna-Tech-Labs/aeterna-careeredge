@@ -1,17 +1,19 @@
 "use client";
 
-import { Bell, Menu, Search } from "lucide-react";
+import { Bell, Menu, Search, LogOut } from "lucide-react";
 
 interface StudentHeaderProps {
   title: string;
   description?: string;
   onMenuClick?: () => void;
+  onLogout?: () => void;
 }
 
 export function StudentHeader({
   title,
   description,
   onMenuClick,
+  onLogout,
 }: StudentHeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex min-h-20 items-center justify-between border-b border-border bg-surface/95 px-5 py-3 backdrop-blur sm:px-8">
@@ -63,6 +65,17 @@ export function StudentHeader({
             <p className="text-sm font-semibold text-foreground">Student</p>
             <p className="text-xs text-secondary-text">CareerEdge Member</p>
           </div>
+
+          {onLogout && (
+            <button
+              type="button"
+              onClick={onLogout}
+              aria-label="Sign out"
+              className="hidden h-9 w-9 items-center justify-center rounded-full text-secondary-text transition hover:bg-surface-muted hover:text-primary sm:flex"
+            >
+              <LogOut size={18} />
+            </button>
+          )}
         </div>
       </div>
     </header>

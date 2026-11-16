@@ -9,12 +9,14 @@ interface StudentLayoutProps {
   children: React.ReactNode;
   title: string;
   description?: string;
+  onLogout?: () => void;
 }
 
 export function StudentLayout({
   children,
   title,
   description,
+  onLogout,
 }: StudentLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -60,6 +62,7 @@ export function StudentLayout({
           title={title}
           description={description}
           onMenuClick={() => setMobileMenuOpen(true)}
+          onLogout={onLogout}
         />
 
         <main className="p-5 sm:p-8">{children}</main>

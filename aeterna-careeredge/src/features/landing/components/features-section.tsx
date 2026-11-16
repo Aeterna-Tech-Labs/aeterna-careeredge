@@ -114,9 +114,8 @@ export function FeaturesSection() {
               const Icon = feature.icon;
 
               return (
-                <Link href="/login">
+                <Link key={feature.title} href="/login">
                   <motion.li
-                    key={feature.title}
                     variants={fadeUp}
                     whileHover={{ y: -6 }}
                     transition={spring}
