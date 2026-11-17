@@ -23,6 +23,24 @@ const links = [
 export function MarketingNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeHref, setActiveHref] = useState("/");
+  const [currentUser, setCurrentUser] = useState<{
+    name: string;
+    onboardingCompleted: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.user) {
+          setCurrentUser({
+            name: data.user.name,
+            onboardingCompleted: Boolean(data.user.onboardingCompleted),
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const updateActiveLink = () => {
@@ -112,24 +130,42 @@ export function MarketingNavbar() {
         </nav>
 
         <div className="hidden shrink-0 items-center gap-6 md:flex">
-          <Link
-            href="/login"
-            className="rounded-md text-sm font-semibold text-white/90 transition-colors hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark"
-          >
-            Log in
-          </Link>
+          {currentUser ? (
+            <Link
+              href={
+                currentUser.onboardingCompleted ? "/dashboard" : "/onboarding"
+              }
+              className="group inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-5 py-2.5 text-sm font-bold text-primary-dark shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gold-soft hover:shadow-md active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark"
+            >
+              Go to Dashboard
+              <ArrowRight
+                size={16}
+                aria-hidden="true"
+                className="transition-transform duration-200 motion-reduce:transition-none group-hover:translate-x-1 group-focus-visible:translate-x-1"
+              />
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="rounded-md text-sm font-semibold text-white/90 transition-colors hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark"
+              >
+                Log in
+              </Link>
 
-          <Link
-            href="/signup"
-            className="group inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-5 py-2.5 text-sm font-bold text-primary-dark shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gold-soft hover:shadow-md active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark"
-          >
-            Get Started
-            <ArrowRight
-              size={16}
-              aria-hidden="true"
-              className="transition-transform duration-200 motion-reduce:transition-none group-hover:translate-x-1 group-focus-visible:translate-x-1"
-            />
-          </Link>
+              <Link
+                href="/signup"
+                className="group inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-5 py-2.5 text-sm font-bold text-primary-dark shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-gold-soft hover:shadow-md active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:ring-offset-primary-dark"
+              >
+                Get Started
+                <ArrowRight
+                  size={16}
+                  aria-hidden="true"
+                  className="transition-transform duration-200 motion-reduce:transition-none group-hover:translate-x-1 group-focus-visible:translate-x-1"
+                />
+              </Link>
+            </>
+          )}
         </div>
 
         <button
@@ -158,20 +194,40 @@ export function MarketingNavbar() {
               </Link>
             ))}
 
-            <Link href="/login" onClick={() => setMenuOpen(false)}>
-              <Button variant="outline" fullWidth>
-                Log in
-              </Button>
-            </Link>
-
-            <Link href="/signup" onClick={() => setMenuOpen(false)}>
-              <Button
-                className="border-2 border-border-strong font-bold text-[#7A0F1F] hover:bg-amber-200"
-                fullWidth
+            {currentUser ? (
+              <Link
+                href={
+                  currentUser.onboardingCompleted
+                    ? "/dashboard"
+                    : "/onboarding"
+                }
+                onClick={() => setMenuOpen(false)}
               >
-                Get Started
-              </Button>
-            </Link>
+                <Button
+                  className="border-2 border-border-strong font-bold text-[#7A0F1F] hover:bg-amber-200"
+                  fullWidth
+                >
+                  Go to Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" onClick={() => setMenuOpen(false)}>
+                  <Button variant="outline" fullWidth>
+                    Log in
+                  </Button>
+                </Link>
+
+                <Link href="/signup" onClick={() => setMenuOpen(false)}>
+                  <Button
+                    className="border-2 border-border-strong font-bold text-[#7A0F1F] hover:bg-amber-200"
+                    fullWidth
+                  >
+                    Get Started
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </nav>
       )}

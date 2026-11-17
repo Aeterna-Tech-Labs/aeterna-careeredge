@@ -1,0 +1,52 @@
+// src/app/api/resumes/[id]/duplicate/route.ts
+// Duplicate Resume Version API (Part 2.3)
+
+import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth/session";
+import { prisma } from "@/lib/prisma";
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession();
+    if (!session || !session.userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const existing = await prisma.resume.findFirst({
+      where: { id, userId: session.userId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Resume not found or access denied." }, { status: 404 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const newTitle = body.title || `${existing.title} (Copy)`;
+    const newTargetRole = body.targetRole || existing.targetRole;
+
+    const duplicated = await prisma.resume.create({
+      data: {
+        userId: session.userId,
+        title: newTitle,
+        targetRole: newTargetRole,
+        templateId: existing.templateId,
+        structuredData: existing.structuredData,
+        styleData: existing.styleData,
+        atsScore: existing.atsScore,
+        contentHash: existing.contentHash,
+      },
+    });
+
+    return NextResponse.json({ resume: duplicated }, { status: 201 });
+  } catch (err: unknown) {
+    console.error("[DuplicateResumeRoute] Error:", err);
+    return NextResponse.json(
+      { error: (err as Error).message || "Failed to duplicate resume." },
+      { status: 500 }
+    );
+  }
+}

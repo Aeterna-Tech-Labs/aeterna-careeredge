@@ -34,15 +34,17 @@ async function runTests() {
     "other.student@example.com",
   ];
 
+  const testMobiles = ["9876543299", "9123456780"];
+
   // Teardown any previous test artifacts
-  await prisma.studentAchievement.deleteMany({ where: { user: { email: { in: testEmails } } } });
-  await prisma.careerGoal.deleteMany({ where: { user: { email: { in: testEmails } } } });
-  await prisma.studentExperience.deleteMany({ where: { user: { email: { in: testEmails } } } });
-  await prisma.studentProject.deleteMany({ where: { user: { email: { in: testEmails } } } });
-  await prisma.studentSkill.deleteMany({ where: { user: { email: { in: testEmails } } } });
-  await prisma.educationRecord.deleteMany({ where: { user: { email: { in: testEmails } } } });
-  await prisma.studentProfile.deleteMany({ where: { user: { email: { in: testEmails } } } });
-  await prisma.user.deleteMany({ where: { email: { in: testEmails } } });
+  await prisma.studentAchievement.deleteMany({ where: { user: { OR: [{ email: { in: testEmails } }, { mobile: { in: testMobiles } }] } } });
+  await prisma.careerGoal.deleteMany({ where: { user: { OR: [{ email: { in: testEmails } }, { mobile: { in: testMobiles } }] } } });
+  await prisma.studentExperience.deleteMany({ where: { user: { OR: [{ email: { in: testEmails } }, { mobile: { in: testMobiles } }] } } });
+  await prisma.studentProject.deleteMany({ where: { user: { OR: [{ email: { in: testEmails } }, { mobile: { in: testMobiles } }] } } });
+  await prisma.studentSkill.deleteMany({ where: { user: { OR: [{ email: { in: testEmails } }, { mobile: { in: testMobiles } }] } } });
+  await prisma.educationRecord.deleteMany({ where: { user: { OR: [{ email: { in: testEmails } }, { mobile: { in: testMobiles } }] } } });
+  await prisma.studentProfile.deleteMany({ where: { user: { OR: [{ email: { in: testEmails } }, { mobile: { in: testMobiles } }] } } });
+  await prisma.user.deleteMany({ where: { OR: [{ email: { in: testEmails } }, { mobile: { in: testMobiles } }] } });
 
   // 1. New User Signup & Password Hashing
   const rawPassword = "StudentPassword@123";
@@ -51,7 +53,7 @@ async function runTests() {
     data: {
       name: "Rohit Kumar",
       email: testEmails[0],
-      mobile: "9876543210",
+      mobile: "9876543299",
       passwordHash,
       counsellorConsent: true,
       onboardingCompleted: false,

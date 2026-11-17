@@ -128,14 +128,25 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [savingAndExiting, setSavingAndExiting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOnboarded, setIsOnboarded] = useState(false);
+  const [fromDashboard, setFromDashboard] = useState(false);
 
   useEffect(() => {
     async function loadCurrentStudent() {
       try {
         const res = await fetch("/api/auth/me");
+        if (
+          typeof window !== "undefined" &&
+          window.location.search.includes("from=dashboard")
+        ) {
+          setFromDashboard(true);
+        }
         if (res.ok) {
           const json = await res.json();
           if (json.user) {
+            if (json.user.onboardingCompleted) {
+              setIsOnboarded(true);
+            }
             const p = json.user.profile;
             setData((prev) => ({
               ...prev,
@@ -237,13 +248,22 @@ export default function OnboardingPage() {
     setSavingAndExiting(true);
     setError(null);
     try {
-      await fetch("/api/onboarding", {
+      const res = await fetch("/api/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, partialSave: true }),
       });
-      // Redirect to home page because uncompleted onboarding cannot access /dashboard (redirected by proxy.ts)
-      router.push("/");
+      const resData = (await res.json().catch(() => ({}))) as {
+        user?: { onboardingCompleted?: boolean };
+      };
+
+      // If user has already completed onboarding or came from the dashboard, return them to the dashboard
+      if (isOnboarded || fromDashboard || resData?.user?.onboardingCompleted) {
+        router.push("/dashboard");
+      } else {
+        router.push("/");
+      }
+      router.refresh();
     } catch {
       setError("Could not save progress. Please try again.");
     } finally {
@@ -307,17 +327,32 @@ export default function OnboardingPage() {
             className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#F6B51C] to-transparent"
           />
           <div className="mx-auto flex h-20 max-w-3xl items-center justify-between gap-4 px-5 sm:px-8">
-            <BrandLogo tone="dark" />
+            <BrandLogo
+              tone="dark"
+              href={isOnboarded || fromDashboard ? "/dashboard" : "/"}
+            />
 
-            <button
-              type="button"
-              onClick={saveAndExit}
-              disabled={savingAndExiting || submitting}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10 hover:text-[#F6B51C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F6B51C] disabled:opacity-50"
-            >
-              <Save size={15} aria-hidden="true" />
-              {savingAndExiting ? "Saving…" : "Save & Exit"}
-            </button>
+            <div className="flex items-center gap-3">
+              {(isOnboarded || fromDashboard) && (
+                <button
+                  type="button"
+                  onClick={() => router.push("/dashboard")}
+                  className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                  Back to Dashboard
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={saveAndExit}
+                disabled={savingAndExiting || submitting}
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10 hover:text-[#F6B51C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F6B51C] disabled:opacity-50"
+              >
+                <Save size={15} aria-hidden="true" />
+                {savingAndExiting ? "Saving…" : "Save & Exit"}
+              </button>
+            </div>
           </div>
         </header>
 

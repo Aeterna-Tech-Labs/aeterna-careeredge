@@ -46,7 +46,17 @@ export async function verifySession(
   try {
     const secret = getSecret();
     const { payload } = await jwtVerify(token, secret);
-    return payload as unknown as SessionPayload;
+    const rawPayload = payload as Record<string, unknown>;
+    const userId = (payload.userId ||
+      (typeof rawPayload.id === "string" ? rawPayload.id : undefined) ||
+      (typeof rawPayload.sub === "string" ? rawPayload.sub : undefined) ||
+      "") as string;
+    return {
+      userId,
+      email: (payload.email || "") as string,
+      name: (payload.name || "") as string,
+      onboardingCompleted: Boolean(payload.onboardingCompleted),
+    };
   } catch {
     return null;
   }

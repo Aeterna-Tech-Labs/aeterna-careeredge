@@ -65,6 +65,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
+  // Allow dedicated print routes with exportToken query param (cryptographically verified in page handler)
+  if (pathname.includes("/print") && request.nextUrl.searchParams.has("exportToken")) {
+    return NextResponse.next();
+  }
+
   // ── Protect student routes ─────────────────────────────────────────────
 
   const isProtected = PROTECTED_PREFIXES.some(

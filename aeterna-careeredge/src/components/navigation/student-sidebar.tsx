@@ -14,23 +14,55 @@ import {
   Settings,
   GraduationCap,
   Network,
+  ShieldCheck,
+  CheckCheck,
+  Zap,
+  HelpCircle,
+  Clock,
+  TrendingUp,
+  Sparkles,
 } from "lucide-react";
 
 const navigation = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Career Passport", href: "/passport", icon: Fingerprint },
+  { label: "Evidence Vault", href: "/evidence-vault", icon: ShieldCheck },
+  { label: "Truth Check", href: "/truth-check", icon: CheckCheck },
   { label: "Resume Builder", href: "/resume", icon: FileText },
-  { label: "SOP Builder", href: "/sop", icon: BookOpen },
   { label: "LinkedIn Builder", href: "/linkedin", icon: Network },
-  { label: "Career Discovery", href: "/career-discovery", icon: Compass },
-  { label: "Job Match", href: "/job-matcher", icon: BriefcaseBusiness },
+  { label: "Job Match", href: "/jobs", icon: BriefcaseBusiness },
   { label: "Applications", href: "/applications", icon: ClipboardList },
+  { label: "Role Fit Explorer", href: "/role-fit-explorer", icon: Compass },
+  { label: "30-Day Sprints", href: "/sprints", icon: Zap },
+  { label: "Interview Prep", href: "/interview-prep", icon: HelpCircle },
+  { label: "Value & Impact", href: "/value", icon: TrendingUp },
+  { label: "Progress Ledger", href: "/progress", icon: Clock },
+  { label: "Pricing & Plans", href: "/pricing", icon: Sparkles },
+  { label: "SOP Builder", href: "/sop", icon: BookOpen },
   { label: "Counselling", href: "/counselling", icon: CalendarDays },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
-// Only these routes actually exist — all others show "coming soon" behavior
-const implementedRoutes = new Set(["/dashboard"]);
+// Active implemented routes
+const implementedRoutes = new Set([
+  "/dashboard",
+  "/passport",
+  "/resume",
+  "/evidence-vault",
+  "/truth-check",
+  "/linkedin",
+  "/jobs",
+  "/applications",
+  "/role-fit-explorer",
+  "/sprints",
+  "/interview-prep",
+  "/value",
+  "/progress",
+  "/pricing",
+  "/sop",
+  "/counselling",
+  "/settings",
+]);
 
 interface StudentSidebarProps {
   onNavigate?: () => void;

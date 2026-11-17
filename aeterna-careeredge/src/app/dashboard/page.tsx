@@ -1,5 +1,4 @@
 // src/app/dashboard/page.tsx
-// Student dashboard — server component reads session, passes user to layout
 
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
@@ -51,6 +50,27 @@ export default async function DashboardPage() {
         },
         orderBy: { createdAt: "desc" },
       },
+      resumes: {
+        select: {
+          id: true,
+          title: true,
+          targetRole: true,
+          templateId: true,
+          atsScore: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: "desc" },
+      },
+      applications: {
+        select: {
+          id: true,
+          jobTitle: true,
+          companyName: true,
+          applicationStatus: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: "desc" },
+      },
       _count: {
         select: {
           educations: true,
@@ -58,6 +78,8 @@ export default async function DashboardPage() {
           projects: true,
           experiences: true,
           certifications: true,
+          resumes: true,
+          applications: true,
         },
       },
     },

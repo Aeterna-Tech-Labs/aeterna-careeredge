@@ -166,3 +166,73 @@
 html {
   scroll-behavior: smooth;
 }
+
+/* ========================================
+   PRINT & ATS PDF EXPORT STYLES
+======================================== */
+
+@media print {
+  @page {
+    margin: 10mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide Application Chrome only, NEVER hide resume elements */
+  .no-print,
+  .print\:hidden,
+  [data-sidebar],
+  [data-header],
+  [data-career-guide],
+  aside,
+  nav:not(.resume-nav) {
+    display: none !important;
+  }
+
+  /* Resume Container */
+  .resume-print-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Resume Header must remain visible */
+  .resume-header {
+    display: block !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .resume-section {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .resume-section-heading {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  .resume-entry {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .resume-bullet {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}

@@ -4,11 +4,14 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { StudentSidebar } from "@/components/navigation/student-sidebar";
 import { StudentHeader } from "@/components/navigation/student-header";
+import { CareerGuideDrawer } from "@/components/guidance/career-guide-drawer";
 
 interface StudentLayoutProps {
   children: React.ReactNode;
   userName?: string;
   userInitial?: string;
+  studentDomain?: string;
+  targetRole?: string;
   onLogout?: () => void;
 }
 
@@ -16,6 +19,8 @@ export function StudentLayout({
   children,
   userName,
   userInitial,
+  studentDomain,
+  targetRole,
   onLogout,
 }: StudentLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -66,6 +71,12 @@ export function StudentLayout({
         />
 
         <main className="p-4 sm:p-6 lg:p-8">{children}</main>
+
+        {/* Global AI Career Guide Drawer */}
+        <CareerGuideDrawer
+          studentDomain={studentDomain}
+          targetRole={targetRole}
+        />
       </div>
     </div>
   );
