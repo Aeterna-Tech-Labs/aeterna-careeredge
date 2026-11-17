@@ -1,69 +1,86 @@
 "use client";
 
-import { Bell, Menu, Search, LogOut } from "lucide-react";
+import { Bell, Menu, Search, LogOut, Shield } from "lucide-react";
 
 interface StudentHeaderProps {
-  title: string;
-  description?: string;
+  userName?: string;
+  userInitial?: string;
   onMenuClick?: () => void;
   onLogout?: () => void;
 }
 
 export function StudentHeader({
-  title,
-  description,
+  userName = "Student",
+  userInitial = "S",
   onMenuClick,
   onLogout,
 }: StudentHeaderProps) {
   return (
-    <header className="sticky top-0 z-30 flex min-h-20 items-center justify-between border-b border-border bg-surface/95 px-5 py-3 backdrop-blur sm:px-8">
-      <div className="flex items-center gap-3">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-white/95 px-4 backdrop-blur sm:px-6">
+      {/* Left: hamburger + search */}
+      <div className="flex items-center gap-3 flex-1">
         <button
           type="button"
           onClick={onMenuClick}
           aria-label="Open navigation menu"
-          className="flex h-10 w-10 items-center justify-center rounded-lg text-secondary-text hover:bg-surface-muted md:hidden"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-secondary-text hover:bg-surface-muted md:hidden"
         >
-          <Menu size={21} />
+          <Menu size={20} />
         </button>
 
-        <div>
-          <h1 className="font-heading text-xl font-bold text-foreground sm:text-2xl">
-            {title}
-          </h1>
-
-          {description && (
-            <p className="mt-1 text-sm text-secondary-text">{description}</p>
-          )}
+        {/* Search bar */}
+        <div className="relative hidden sm:block max-w-md flex-1">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-text"
+          />
+          <input
+            type="text"
+            placeholder="Search verified skills, jobs, mock assessments…"
+            className="h-9 w-full rounded-lg border border-border bg-surface-muted pl-9 pr-4 text-[13px] text-foreground placeholder:text-muted-text focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors"
+          />
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          aria-label="Search"
-          className="hidden h-10 w-10 items-center justify-center rounded-full text-secondary-text transition hover:bg-surface-muted hover:text-primary sm:flex"
-        >
-          <Search size={19} />
-        </button>
+      {/* Right: language, ESG, notifications, user */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Language badge */}
+        <span className="hidden sm:inline-flex h-7 items-center rounded-md border border-border bg-surface-muted px-2 text-[11px] font-semibold text-secondary-text">
+          EN
+        </span>
 
+        {/* ESG badge */}
+        <span className="hidden lg:inline-flex h-7 items-center gap-1 rounded-md border border-border bg-surface-muted px-2 text-[11px] font-semibold text-secondary-text">
+          <Shield size={12} />
+          ESG
+        </span>
+
+        {/* Notifications */}
         <button
           type="button"
           aria-label="Notifications"
-          className="relative flex h-10 w-10 items-center justify-center rounded-full text-secondary-text transition hover:bg-surface-muted hover:text-primary"
+          className="relative flex h-9 w-9 items-center justify-center rounded-lg text-secondary-text transition hover:bg-surface-muted hover:text-primary"
         >
-          <Bell size={19} />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-gold" />
+          <Bell size={18} />
+          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#F2B63D] ring-2 ring-white" />
         </button>
 
-        <div className="flex items-center gap-2 border-l border-border pl-3 sm:gap-3 sm:pl-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gold-soft text-sm font-bold text-primary">
-            S
+        {/* Divider */}
+        <div className="h-8 w-px bg-border" />
+
+        {/* User */}
+        <div className="flex items-center gap-2.5">
+          <div className="hidden sm:block text-right">
+            <p className="text-[13px] font-semibold text-foreground leading-tight">
+              {userName}
+            </p>
+            <p className="text-[10px] font-medium text-primary">
+              Tier 1 Verified Student
+            </p>
           </div>
 
-          <div className="hidden sm:block">
-            <p className="text-sm font-semibold text-foreground">Student</p>
-            <p className="text-xs text-secondary-text">CareerEdge Member</p>
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#F2B63D] to-[#E8A020] text-sm font-bold text-[#4C0915] shadow-sm">
+            {userInitial}
           </div>
 
           {onLogout && (
@@ -71,9 +88,9 @@ export function StudentHeader({
               type="button"
               onClick={onLogout}
               aria-label="Sign out"
-              className="hidden h-9 w-9 items-center justify-center rounded-full text-secondary-text transition hover:bg-surface-muted hover:text-primary sm:flex"
+              className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg text-secondary-text transition hover:bg-surface-muted hover:text-primary"
             >
-              <LogOut size={18} />
+              <LogOut size={16} />
             </button>
           )}
         </div>

@@ -40,6 +40,26 @@ export default async function DashboardPage() {
           passportScore: true,
         },
       },
+      storedDocuments: {
+        select: {
+          id: true,
+          originalFileName: true,
+          fileSizeBytes: true,
+          mimeType: true,
+          category: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      _count: {
+        select: {
+          educations: true,
+          skills: true,
+          projects: true,
+          experiences: true,
+          certifications: true,
+        },
+      },
     },
   });
 
