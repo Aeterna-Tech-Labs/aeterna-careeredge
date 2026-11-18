@@ -7,7 +7,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { ResumePreview } from "@/app/resume/builder/components/resume-preview";
 import type { FullResumeData } from "@/lib/resume/types";
-import { Printer, Download, ArrowLeft, Check, Loader2 } from "lucide-react";
+import { Printer, Download, ArrowLeft, Check, Loader2, Sparkles } from "lucide-react";
 
 interface PrintClientProps {
   resumeId: string;
@@ -19,13 +19,27 @@ interface PrintClientProps {
 
 export function PrintClient({
   resumeId,
-  data,
+  data: initialData,
   autoPrint = false,
   isPdfExport = false,
   pageSize = "A4",
 }: PrintClientProps) {
+  const [data, setData] = useState<FullResumeData>(initialData);
   const [downloading, setDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
+
+  useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
+
+  useEffect(() => {
+    const candidateName = data.contactInfo.name?.trim() || "";
+    const targetRole = data.targetRole?.trim() || "";
+    const safeTitle = candidateName
+      ? `${candidateName}${targetRole ? ` - ${targetRole}` : " - Resume"}`
+      : "Resume";
+    document.title = safeTitle;
+  }, [data]);
 
   useEffect(() => {
     if (autoPrint) {
@@ -35,6 +49,49 @@ export function PrintClient({
       return () => clearTimeout(timer);
     }
   }, [autoPrint]);
+
+  function handleToggleFitToOnePage() {
+    const isFit = !data.style.page?.fitToOnePage;
+    const updatedStyle: FullResumeData["style"] = isFit
+      ? {
+          ...data.style,
+          fontSizes: {
+            ...data.style.fontSizes,
+            name: Math.min(data.style.fontSizes.name, 20),
+            headings: Math.min(data.style.fontSizes.headings, 12),
+            body: Math.min(data.style.fontSizes.body, 9.5),
+          },
+          spacing: {
+            ...data.style.spacing,
+            margins: "compact",
+            sectionSpacing: 8,
+            lineHeight: 1.25,
+            bulletIndent: 12,
+          },
+          page: {
+            ...data.style.page,
+            fitToOnePage: true,
+          },
+        }
+      : {
+          ...data.style,
+          page: {
+            ...data.style.page,
+            fitToOnePage: false,
+          },
+        };
+    const updatedData = { ...data, style: updatedStyle };
+    setData(updatedData);
+
+    fetch(`/api/resumes/${resumeId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        styleData: updatedStyle,
+        structuredData: updatedData,
+      }),
+    }).catch((err) => console.warn("Failed to persist fitToOnePage toggle:", err));
+  }
 
   async function handleDownload() {
     setDownloading(true);
@@ -71,13 +128,53 @@ export function PrintClient({
 
   return (
     <div className={isPdfExport ? "bg-white p-0 m-0" : "min-h-screen bg-stone-100 print:bg-white print:p-0"}>
-      {/* ── Dynamic Page Sizing ────────────────────────────────────────────── */}
-      <style>{`
-        @page {
-          size: ${pageSize === "Letter" ? "letter portrait" : "A4 portrait"};
-          margin: 10mm;
-        }
-      `}</style>
+      {/* ── Dynamic Page Sizing (Zero Margins to eliminate browser header timestamp/company & footer URLs) ────── */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @page {
+              size: ${pageSize === "Letter" ? "letter portrait" : "A4 portrait"};
+              margin: 0mm !important;
+            }
+            @media print {
+              html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              .resume-print-container {
+                box-sizing: border-box !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: ${
+                  data.style?.spacing?.margins === "compact" || data.style?.page?.fitToOnePage
+                    ? "6mm 8mm"
+                    : data.style?.spacing?.margins === "relaxed"
+                    ? "16mm 18mm"
+                    : "12mm 14mm"
+                } !important;
+                border: none !important;
+                box-shadow: none !important;
+                background: transparent !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                ${
+                  data.style?.page?.fitToOnePage
+                    ? `
+                      break-inside: avoid !important;
+                      page-break-inside: avoid !important;
+                      max-height: ${pageSize === "Letter" ? "279.4mm" : "297mm"} !important;
+                    `
+                    : ""
+                }
+              }
+            }
+          `,
+        }}
+      />
 
       {/* ── Screen-Only Control Toolbar (Strictly hidden when printing or headless export) ──────── */}
       {!isPdfExport && (
@@ -102,6 +199,20 @@ export function PrintClient({
             </div>
 
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleToggleFitToOnePage}
+                className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition ${
+                  data.style.page?.fitToOnePage
+                    ? "border-emerald-600 bg-emerald-50 text-emerald-800"
+                    : "border-[#EBDDD1] bg-white text-[#765F5D] hover:bg-stone-50"
+                }`}
+                title="Ensure entire resume fits strictly on 1 single printed page"
+              >
+                <Sparkles size={13} className={data.style.page?.fitToOnePage ? "text-emerald-600" : "text-[#F6B51C]"} />
+                <span>Fit to 1 Page: {data.style.page?.fitToOnePage ? "ON" : "OFF"}</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleDownload}

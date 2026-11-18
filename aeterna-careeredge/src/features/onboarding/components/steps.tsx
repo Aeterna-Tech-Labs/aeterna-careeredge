@@ -1,7 +1,23 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Pencil, X, Award, Briefcase, GraduationCap, Sparkles, Target } from "lucide-react";
+import {
+  Pencil,
+  X,
+  Award,
+  Briefcase,
+  GraduationCap,
+  Sparkles,
+  Target,
+  FolderGit2,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  Trash2,
+  ExternalLink,
+  MoveUp,
+  MoveDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,6 +31,7 @@ import {
   DOMAIN_DETAILS,
   type AcademicDomain,
   type OnboardingData,
+  type OnboardingProject,
 } from "@/types/onboarding";
 import {
   ChipSelect,
@@ -227,6 +244,7 @@ export function StepPersonalEducation({ data, update, errors }: StepProps) {
 
 export function StepSkillsProjects({ data, update, errors }: StepProps) {
   const [customSkill, setCustomSkill] = useState("");
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(0);
 
   const domainMeta = data.academicDomain
     ? DOMAIN_DETAILS[data.academicDomain as AcademicDomain]
@@ -250,6 +268,49 @@ export function StepSkillsProjects({ data, update, errors }: StepProps) {
   const projectPlaceholder =
     domainMeta?.placeholders.project ||
     "Briefly describe your key academic project, research study, practical case, or creative portfolio.";
+
+  // Projects list (structured one-by-one input)
+  const projects: OnboardingProject[] = Array.isArray(data.projects) ? data.projects : [];
+
+  function addProject() {
+    const newProj: OnboardingProject = {
+      id: `proj_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+      title: "",
+      role: "",
+      description: "",
+      technologies: "",
+      url: "",
+    };
+    const updated = [...projects, newProj];
+    update({ projects: updated });
+    setExpandedIndex(updated.length - 1);
+  }
+
+  function updateProject(index: number, patch: Partial<OnboardingProject>) {
+    const updated = [...projects];
+    updated[index] = { ...updated[index], ...patch };
+    update({ projects: updated });
+  }
+
+  function removeProject(index: number) {
+    const updated = projects.filter((_, i) => i !== index);
+    update({ projects: updated });
+    if (expandedIndex === index) {
+      setExpandedIndex(updated.length > 0 ? Math.max(0, index - 1) : null);
+    } else if (expandedIndex !== null && expandedIndex > index) {
+      setExpandedIndex(expandedIndex - 1);
+    }
+  }
+
+  function moveProject(index: number, direction: "up" | "down") {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= projects.length) return;
+    const updated = [...projects];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+    update({ projects: updated });
+    setExpandedIndex(targetIndex);
+  }
 
   return (
     <div className="space-y-6">
@@ -316,21 +377,191 @@ export function StepSkillsProjects({ data, update, errors }: StepProps) {
         )}
       </FieldGroup>
 
-      {/* Projects */}
-      <FormField
-        id="ob-projects"
-        label="Academic, Practical or Research Projects"
-        optional
-        hint="Supports research papers, legal briefs, design portfolios, clinical studies, or technical work"
-      >
-        <TextareaControl
-          id="ob-projects"
-          value={data.projects}
-          onChange={(projects) => update({ projects })}
-          placeholder={projectPlaceholder}
-          rows={4}
-        />
-      </FormField>
+      {/* Structured Projects (FlowCV style: one-by-one with add/reorder/expand) */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-xs font-bold uppercase tracking-wider text-[#7A0F1F] flex items-center gap-1.5">
+              <FolderGit2 size={14} />
+              <span>Projects, Capstones &amp; Practical Work</span>
+            </label>
+            <p className="mt-0.5 text-xs text-[#765F5D]">
+              Input your projects one by one. Fill one and click &quot;+ Add Another Project&quot; to create space for more.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={addProject}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[#7A0F1F] bg-[#FFF9ED] px-3 py-1.5 text-xs font-bold text-[#7A0F1F] hover:bg-[#FFF0D4] transition"
+          >
+            <Plus size={13} />
+            <span>Add Project</span>
+          </button>
+        </div>
+
+        {projects.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[#EBDDD1] bg-[#FFFBF9] p-6 text-center space-y-2">
+            <FolderGit2 size={24} className="mx-auto text-[#7A0F1F]/60" />
+            <p className="text-xs font-medium text-[#765F5D]">
+              No projects added yet. Click &quot;Add Project&quot; to include academic research, capstones, client briefs, or creative portfolios.
+            </p>
+            <button
+              type="button"
+              onClick={addProject}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#7A0F1F] px-4 py-2 text-xs font-bold text-white hover:bg-[#600C18] transition"
+            >
+              <Plus size={13} />
+              <span>Add Your First Project</span>
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {projects.map((proj, pIdx) => {
+              const isExpanded = expandedIndex === pIdx;
+              return (
+                <div
+                  key={proj.id || pIdx}
+                  className="rounded-2xl border border-[#EBDDD1] bg-[#FFFBF9] p-4 transition shadow-xs"
+                >
+                  {/* Card Header (Collapsed Summary Bar) */}
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedIndex(isExpanded ? null : pIdx)}
+                      className="flex items-center gap-2 text-left flex-1 group"
+                    >
+                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#7A0F1F]/10 text-xs font-bold text-[#7A0F1F]">
+                        {pIdx + 1}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-bold text-xs text-[#2B1B1B] group-hover:text-[#7A0F1F] transition block truncate">
+                          {proj.title.trim() || `Project #${pIdx + 1} (Untitled)`}
+                        </span>
+                        {proj.technologies && !isExpanded && (
+                          <span className="text-[11px] text-[#765F5D] truncate block">
+                            {proj.technologies}
+                          </span>
+                        )}
+                      </div>
+                      {isExpanded ? (
+                        <ChevronUp size={16} className="text-stone-400" />
+                      ) : (
+                        <ChevronDown size={16} className="text-stone-400" />
+                      )}
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        disabled={pIdx === 0}
+                        onClick={() => moveProject(pIdx, "up")}
+                        className="rounded p-1 text-stone-400 hover:text-stone-700 disabled:opacity-20"
+                        title="Move Up"
+                      >
+                        <MoveUp size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pIdx === projects.length - 1}
+                        onClick={() => moveProject(pIdx, "down")}
+                        className="rounded p-1 text-stone-400 hover:text-stone-700 disabled:opacity-20"
+                        title="Move Down"
+                      >
+                        <MoveDown size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeProject(pIdx)}
+                        className="rounded p-1 text-stone-400 hover:text-rose-700"
+                        title="Remove Project"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Expanded Form Fields */}
+                  {isExpanded && (
+                    <div className="mt-4 pt-3 border-t border-[#EBDDD1] space-y-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold text-[#352020]">
+                            Project Title <span className="text-[#7A0F1F]">*</span>
+                          </label>
+                          <Input
+                            value={proj.title}
+                            onChange={(e) => updateProject(pIdx, { title: e.target.value })}
+                            placeholder="e.g. Healthcare Patient Portal, GST Auditing Tool"
+                            className="h-10 text-xs rounded-xl border-[#EBDDD1] bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold text-[#352020]">
+                            Role / Focus Area <span className="text-stone-400 font-normal">(Optional)</span>
+                          </label>
+                          <Input
+                            value={proj.role || ""}
+                            onChange={(e) => updateProject(pIdx, { role: e.target.value })}
+                            placeholder="e.g. Full Stack Developer, Research Lead"
+                            className="h-10 text-xs rounded-xl border-[#EBDDD1] bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold text-[#352020]">
+                            Technologies / Tools Used <span className="text-stone-400 font-normal">(Comma-separated)</span>
+                          </label>
+                          <Input
+                            value={proj.technologies || ""}
+                            onChange={(e) => updateProject(pIdx, { technologies: e.target.value })}
+                            placeholder="e.g. React, Next.js, PostgreSQL or Excel, Tally"
+                            className="h-10 text-xs rounded-xl border-[#EBDDD1] bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-semibold text-[#352020]">
+                            Project / Repository / Artifact Link <span className="text-stone-400 font-normal">(Optional)</span>
+                          </label>
+                          <Input
+                            value={proj.url || ""}
+                            onChange={(e) => updateProject(pIdx, { url: e.target.value })}
+                            placeholder="e.g. https://github.com/username/project"
+                            className="h-10 text-xs rounded-xl border-[#EBDDD1] bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold text-[#352020]">
+                          Key Deliverables, Approach &amp; Impact <span className="text-stone-400 font-normal">(Deliverables or Bullet points)</span>
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={proj.description}
+                          onChange={(e) => updateProject(pIdx, { description: e.target.value })}
+                          placeholder={projectPlaceholder}
+                          className="w-full rounded-xl border border-[#EBDDD1] bg-white p-2.5 text-xs leading-relaxed text-[#2B1810] focus:border-[#7A0F1F] focus:outline-hidden"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={addProject}
+              className="w-full rounded-xl border border-dashed border-[#7A0F1F]/40 bg-[#FFF9ED]/60 py-2.5 text-xs font-bold text-[#7A0F1F] hover:bg-[#FFF0D4] transition flex items-center justify-center gap-1.5"
+            >
+              <Plus size={13} />
+              <span>+ Add Another Project</span>
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -578,8 +809,67 @@ export function StepReview({
             ))}
           </div>
         )}
-        <div className="divide-y divide-[#F0E5DA]">
-          <ReviewRow label="Notable Projects" value={data.projects} />
+        <div className="pt-2 border-t border-[#F0E5DA] space-y-2">
+          <span className="font-semibold text-xs text-[#765F5D] uppercase tracking-wider block">
+            Projects &amp; Practical Work ({Array.isArray(data.projects) ? data.projects.length : 0})
+          </span>
+          {Array.isArray(data.projects) && data.projects.length > 0 ? (
+            <div className="space-y-2">
+              {data.projects.map((proj, idx) => (
+                <div
+                  key={proj.id || idx}
+                  className="rounded-xl border border-[#EBDDD1] bg-white p-3 space-y-1.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-xs text-[#2B1B1B]">
+                        {proj.title || `Project #${idx + 1}`}
+                      </h4>
+                      {proj.role && (
+                        <span className="rounded-md bg-[#FFF9ED] border border-[#EBDDD1] px-2 py-0.5 text-[10px] font-semibold text-[#7A0F1F]">
+                          {proj.role}
+                        </span>
+                      )}
+                    </div>
+                    {proj.url && (
+                      <a
+                        href={proj.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#7A0F1F] hover:underline"
+                      >
+                        <span>Link</span>
+                        <ExternalLink size={10} />
+                      </a>
+                    )}
+                  </div>
+                  {proj.technologies && (
+                    <div className="flex flex-wrap gap-1">
+                      {proj.technologies
+                        .split(/[,+]/)
+                        .map((t) => t.trim())
+                        .filter(Boolean)
+                        .map((tag, tIdx) => (
+                          <span
+                            key={tIdx}
+                            className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-700"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                  {proj.description && (
+                    <p className="text-xs text-[#765F5D] whitespace-pre-line leading-relaxed">
+                      {proj.description}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-[#765F5D] italic">None specified (Optional)</p>
+          )}
         </div>
       </ReviewCard>
 

@@ -4,6 +4,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
+import { deduplicateUserPassport } from "@/lib/passport/deduplication";
 import { PassportClient } from "./passport-client";
 
 export default async function PassportPage() {
@@ -12,6 +13,9 @@ export default async function PassportPage() {
   if (!session) {
     redirect("/login");
   }
+
+  // Seamlessly deduplicate any redundant records prior to rendering
+  await deduplicateUserPassport(session.userId);
 
   const user = await db.user.findUnique({
     where: { id: session.userId },
@@ -41,19 +45,41 @@ export default async function PassportPage() {
           id: e.id,
           institution: e.institution,
           degree: e.degree || e.level,
+          level: e.level,
           fieldOfStudy: e.fieldOfStudy,
+          startYear: e.startYear,
+          endYear: e.endYear,
+          isCurrent: e.isCurrent,
           startDate: e.startYear ? String(e.startYear) : "N/A",
           endDate: e.endYear ? String(e.endYear) : e.isCurrent ? "Present" : null,
           score: e.scoreOrGrade,
         })),
-        skills: user.skills,
-        projects: user.projects,
+        skills: user.skills.map((s) => ({
+          id: s.id,
+          name: s.name,
+          category: s.category,
+          level: s.proficiencyLevel || "INTERMEDIATE",
+        })),
+        projects: user.projects.map((p) => ({
+          id: p.id,
+          title: p.title,
+          description: p.description,
+          role: p.role,
+          technologies: p.toolsOrTechnologies,
+          projectType: p.projectType,
+          url: p.projectUrl,
+          artifactUrl: p.artifactUrl,
+        })),
         experiences: user.experiences.map((exp) => ({
           id: exp.id,
           jobTitle: exp.jobTitle,
           companyName: exp.companyName,
+          employmentType: exp.employmentType,
           startDate: exp.startDate ? new Date(exp.startDate).toLocaleDateString() : "N/A",
           endDate: exp.endDate ? new Date(exp.endDate).toLocaleDateString() : exp.isCurrent ? "Present" : null,
+          rawStartDate: exp.startDate ? exp.startDate.toISOString().split("T")[0] : "",
+          rawEndDate: exp.endDate ? exp.endDate.toISOString().split("T")[0] : "",
+          isCurrent: exp.isCurrent,
           description: exp.description,
         })),
         certifications: user.certifications.map((c) => ({
@@ -61,6 +87,7 @@ export default async function PassportPage() {
           name: c.title,
           issuingOrg: c.issuingOrganization,
           issueDate: c.issueDate ? new Date(c.issueDate).toLocaleDateString() : null,
+          rawIssueDate: c.issueDate ? c.issueDate.toISOString().split("T")[0] : "",
           credentialUrl: c.credentialUrl,
         })),
         documentCount: user.storedDocuments.length,

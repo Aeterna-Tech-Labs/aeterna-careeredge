@@ -71,6 +71,17 @@ export default async function DashboardPage() {
         },
         orderBy: { updatedAt: "desc" },
       },
+      evidenceItems: {
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          relatedSkill: true,
+          provenance: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      },
       _count: {
         select: {
           educations: true,
@@ -80,6 +91,8 @@ export default async function DashboardPage() {
           certifications: true,
           resumes: true,
           applications: true,
+          evidenceItems: true,
+          interviewPrepKits: true,
         },
       },
     },

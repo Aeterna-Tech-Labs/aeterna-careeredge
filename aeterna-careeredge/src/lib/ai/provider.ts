@@ -196,6 +196,19 @@ IMPORTANT PRODUCT INVARIANTS:
 3. No hiring probability percentages.
 4. Keep advice domain-specific and actionable.`;
 
+        const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [
+          { text: promptText },
+        ];
+
+        if (params.request.documentAttachment) {
+          parts.push({
+            inlineData: {
+              mimeType: params.request.documentAttachment.mimeType,
+              data: params.request.documentAttachment.base64Data,
+            },
+          });
+        }
+
         let geminiRes: Response | null = null;
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
@@ -204,7 +217,7 @@ IMPORTANT PRODUCT INVARIANTS:
               headers: { "Content-Type": "application/json" },
               signal: controller.signal,
               body: JSON.stringify({
-                contents: [{ parts: [{ text: promptText }] }],
+                contents: [{ parts }],
                 generationConfig: {
                   temperature: 0.2,
                   responseMimeType: "application/json",
@@ -353,6 +366,61 @@ IMPORTANT PRODUCT INVARIANTS:
     let mockData: unknown = {};
 
     switch (request.operation) {
+      case "EXTRACTION":
+        mockData = {
+          contactInfo: {
+            name: (request.studentContext.name as string) || "Candidate Name",
+            email: "candidate@careeredge.internal",
+            phone: "+91 98765 43210",
+            location: "Bengaluru, India",
+          },
+          summary: `Motivated ${role} with strong foundational skills in ${domain}.`,
+          education: [
+            {
+              degree: "Bachelor of Engineering / B.Tech",
+              institution: (request.studentContext.institution as string) || "Accredited University",
+              startYear: "2020",
+              endYear: "2024",
+              score: "8.5 CGPA",
+              bullets: [],
+            },
+          ],
+          experience: [
+            {
+              title: role,
+              company: "Technology Solutions Pvt Ltd",
+              startDate: "06/2023",
+              endDate: "12/2023",
+              isCurrent: false,
+              bullets: [
+                "Engineered responsive components and optimized client-facing workflows.",
+                "Collaborated with cross-functional teams to deliver production features.",
+              ],
+            },
+          ],
+          projects: [
+            {
+              title: "Portfolio & Application Platform",
+              bullets: [
+                "Developed scalable full-stack web application with modern frameworks.",
+                "Implemented unit testing and continuous integration pipelines.",
+              ],
+            },
+          ],
+          skills: (request.studentContext.skills?.length ? request.studentContext.skills : ["JavaScript", "React", "Node.js", "SQL"]).map(
+            (name) => ({ name, category: "TECHNICAL" })
+          ),
+          certifications: [
+            {
+              title: "Certified Professional Associate",
+              issuer: "Industry Standards Organization",
+              year: "2023",
+            },
+          ],
+          customSections: [],
+        };
+        break;
+
       case "RESUME_REVIEW":
         mockData = {
           domain,

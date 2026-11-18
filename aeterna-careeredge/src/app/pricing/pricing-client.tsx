@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { StudentLayout } from "@/components/layouts/student-layout";
+import { HowItWorksPanel } from "@/components/guidance/how-it-works-panel";
 import {
   ShieldCheck,
   Check,
@@ -71,6 +72,9 @@ export function PricingClient({ studentName }: PricingClientProps) {
             No dark patterns. No false hiring promises. Free forever for baseline readiness, or upgrade to Pro when you need deep role-tailored optimization.
           </p>
         </div>
+
+        {/* Guidance Helper */}
+        <HowItWorksPanel toolKey="pricing" />
 
         {/* Success Alert */}
         {successMessage && (

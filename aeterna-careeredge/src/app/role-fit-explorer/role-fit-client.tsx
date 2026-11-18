@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { StudentLayout } from "@/components/layouts/student-layout";
+import { HowItWorksPanel } from "@/components/guidance/how-it-works-panel";
 import {
   Compass,
   CheckCircle2,
@@ -88,6 +89,9 @@ export function RoleFitClient({ studentName }: RoleFitClientProps) {
             </Link>
           </div>
         </div>
+
+        {/* Guidance Helper */}
+        <HowItWorksPanel toolKey="role-fit-explorer" />
 
         {/* Profession Switcher Tabs */}
         <div className="bg-white rounded-2xl border border-gray-200 p-2 shadow-sm flex items-center gap-2 overflow-x-auto scrollbar-none">

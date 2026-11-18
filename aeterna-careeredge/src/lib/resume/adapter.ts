@@ -297,10 +297,21 @@ export function normalizeResumeData(
       .map((l) => l.replace(/^[•\-*]\s*/, "").trim())
       .filter(Boolean);
 
+    const techTags = Array.isArray(p.techStack)
+      ? (p.techStack as string[]).map(String)
+      : typeof p.techStack === "string" && p.techStack.trim()
+        ? p.techStack.split(/[,+]/).map((t) => t.trim()).filter(Boolean)
+        : typeof p.technologies === "string" && p.technologies.trim()
+          ? p.technologies.split(/[,+]/).map((t) => t.trim()).filter(Boolean)
+          : Array.isArray(p.tags)
+            ? (p.tags as string[]).map(String)
+            : undefined;
+
     return {
       id: `ent_proj_${idx}`,
       title: String(p.title || "Project"),
-      url: p.url ? String(p.url) : undefined,
+      subtitle: p.subtitle ? String(p.subtitle) : p.role ? String(p.role) : undefined,
+      url: p.url ? String(p.url) : p.projectUrl ? String(p.projectUrl) : undefined,
       bullets:
         bulletLines.length > 0
           ? bulletLines.map((line, bIdx) => ({
@@ -317,7 +328,7 @@ export function normalizeResumeData(
                 isApproved: true,
               },
             ],
-      tags: Array.isArray(p.techStack) ? (p.techStack as string[]).map(String) : undefined,
+      tags: techTags,
     };
   });
 

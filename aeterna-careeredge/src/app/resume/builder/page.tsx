@@ -16,18 +16,29 @@ export default async function ResumeBuilderPage({
     redirect("/login");
   }
 
-  const { id } = await searchParams;
-  if (!id) {
-    redirect("/resume");
-  }
-
   const rawSession = session as unknown as Record<string, unknown>;
   const sessionUserId =
     session.userId ||
     (typeof rawSession.id === "string" ? rawSession.id : undefined) ||
     (typeof rawSession.sub === "string" ? rawSession.sub : undefined);
+
+  const { id } = await searchParams;
+  let targetResumeId = id;
+  if (!targetResumeId) {
+    const latestResume = await db.resume.findFirst({
+      where: sessionUserId ? { userId: sessionUserId } : undefined,
+      orderBy: { updatedAt: "desc" },
+      select: { id: true },
+    });
+    if (latestResume) {
+      targetResumeId = latestResume.id;
+    } else {
+      redirect("/resume");
+    }
+  }
+
   const resume = await db.resume.findFirst({
-    where: sessionUserId ? { id, userId: sessionUserId } : { id },
+    where: sessionUserId ? { id: targetResumeId, userId: sessionUserId } : { id: targetResumeId },
   });
 
   if (!resume) {

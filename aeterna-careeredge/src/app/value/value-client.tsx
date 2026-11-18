@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { StudentLayout } from "@/components/layouts/student-layout";
+import { HowItWorksPanel } from "@/components/guidance/how-it-works-panel";
 import {
   TrendingUp,
   Clock,
@@ -89,6 +90,9 @@ export function ValueClient({ studentName }: ValueClientProps) {
             </Link>
           </div>
         </div>
+
+        {/* Guidance Helper */}
+        <HowItWorksPanel toolKey="value-roi" />
 
         {/* 4 Hero ROI Metric Cards */}
         {loading ? (

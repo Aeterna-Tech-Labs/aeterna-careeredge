@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { StudentLayout } from "@/components/layouts/student-layout";
+import { HowItWorksPanel } from "@/components/guidance/how-it-works-panel";
 import {
   HelpCircle,
   ShieldCheck,
@@ -185,6 +186,9 @@ export function InterviewPrepClient({
             </button>
           </div>
         </div>
+
+        {/* Guidance Helper */}
+        <HowItWorksPanel toolKey="interview-prep-kit" />
 
         {/* Content Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

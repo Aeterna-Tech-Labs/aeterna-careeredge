@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { StudentLayout } from "@/components/layouts/student-layout";
+import { HowItWorksPanel } from "@/components/guidance/how-it-works-panel";
 import {
   Briefcase,
   Plus,
@@ -19,6 +20,7 @@ import {
   X,
   Compass,
 } from "lucide-react";
+import { UploadResumeButton } from "@/components/resume/upload-resume-button";
 import type { ApplicationStatus } from "@/lib/applications/service";
 import type { GeneratedApplicationPack } from "@/lib/applications/pack";
 
@@ -265,6 +267,7 @@ export function ApplicationsClient({
               <Compass className="w-4 h-4 text-[#7A0F1F]" />
               Explore Jobs
             </Link>
+            <UploadResumeButton variant="outline" label="Upload Resume" />
             <button
               onClick={() => setShowNewModal(true)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-[#7A0F1F] text-white hover:bg-[#600C18] shadow-sm transition"
@@ -274,6 +277,9 @@ export function ApplicationsClient({
             </button>
           </div>
         </div>
+
+        {/* Guidance Helper */}
+        <HowItWorksPanel toolKey="application-tracker" />
 
         {/* Pipeline Stage Summary Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -472,12 +478,22 @@ export function ApplicationsClient({
                   </h2>
                   <p className="text-xs text-gray-700">{activePackApp.companyName}</p>
                 </div>
-                <button
-                  onClick={() => setActivePackApp(null)}
-                  className="text-gray-400 hover:text-gray-600 p-1"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <UploadResumeButton
+                    variant="compact"
+                    label="Use my uploaded resume as base"
+                    defaultTargetRole={activePackApp.jobTitle}
+                    onSuccess={() => {
+                      if (activePackApp) handleOpenPack(activePackApp);
+                    }}
+                  />
+                  <button
+                    onClick={() => setActivePackApp(null)}
+                    className="text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Pack Navigation Tabs */}

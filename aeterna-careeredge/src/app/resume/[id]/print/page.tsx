@@ -2,6 +2,7 @@
 // Dedicated Clean Resume Print & Export Page
 // Ownership-enforced, zero layout chrome, ATS-ready print rendering.
 
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
@@ -17,6 +18,31 @@ interface PrintPageProps {
     isPdfExport?: string;
     pageSize?: string;
   }>;
+}
+
+export async function generateMetadata({ params }: PrintPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const resumeRecord = await prisma.resume.findUnique({
+    where: { id },
+    select: {
+      targetRole: true,
+      user: { select: { name: true } },
+    },
+  });
+
+  const candidateName = resumeRecord?.user?.name?.trim() || "";
+  const targetRole = resumeRecord?.targetRole?.trim() || "";
+  const title = candidateName
+    ? `${candidateName}${targetRole ? ` - ${targetRole}` : " - Resume"}`
+    : "Resume";
+
+  return {
+    title,
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
 }
 
 export default async function ResumePrintPage({ params, searchParams }: PrintPageProps) {

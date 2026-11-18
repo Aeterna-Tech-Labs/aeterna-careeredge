@@ -10,6 +10,15 @@ export {
   type DomainMeta,
 } from "@/lib/constants/domains";
 
+export interface OnboardingProject {
+  id: string;
+  title: string;
+  role?: string;
+  description: string;
+  technologies?: string;
+  url?: string;
+}
+
 export interface OnboardingData {
   // Step 1 — Personal & Education Details
   name: string;
@@ -28,7 +37,7 @@ export interface OnboardingData {
 
   // Step 2 — Skills & Projects
   skills: string[];
-  projects: string;
+  projects: OnboardingProject[];
 
   // Step 3 — Experience & Achievements
   experience: string;

@@ -27,10 +27,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (data.academicDomain && data.educationLevel && data.institution && data.course) score += 20;
     if (data.gradingType && data.gradeValue) score += 10;
     if (Array.isArray(data.skills) && data.skills.length > 0) score += 15;
-    if (data.projects?.trim()) score += 15;
+    const rawProjects = data.projects as unknown;
+    const hasProjects = Array.isArray(rawProjects)
+      ? rawProjects.length > 0 && rawProjects.some((p) => p && typeof p === "object" && "title" in p && String((p as Record<string, unknown>).title).trim().length > 0)
+      : typeof rawProjects === "string" && rawProjects.trim().length > 0;
+    if (hasProjects) score += 15;
     if (data.experience?.trim() || data.certifications?.trim() || data.achievements?.trim()) score += 10;
     if (data.preferredJobRole?.trim() && Array.isArray(data.careerInterests) && data.careerInterests.length > 0) score += 5;
     const passportScore = Math.min(100, Math.max(15, score));
+
+    const serializedProjects = Array.isArray(data.projects)
+      ? JSON.stringify(data.projects)
+      : (data.projects ?? null);
 
     // 1. Persist the student profile (upsert — idempotent)
     await db.studentProfile.upsert({
@@ -47,7 +55,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         gradingType: data.gradingType ?? null,
         gradeValue: data.gradeValue ?? null,
         skills: data.skills ? JSON.stringify(data.skills) : null,
-        projects: data.projects ?? null,
+        projects: serializedProjects,
         experience: data.experience ?? null,
         achievements: data.achievements ?? null,
         certifications: data.certifications ?? null,
@@ -75,7 +83,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         gradingType: data.gradingType ?? null,
         gradeValue: data.gradeValue ?? null,
         skills: data.skills ? JSON.stringify(data.skills) : null,
-        projects: data.projects ?? null,
+        projects: serializedProjects,
         experience: data.experience ?? null,
         achievements: data.achievements ?? null,
         certifications: data.certifications ?? null,
@@ -91,6 +99,31 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         passportScore,
       },
     });
+
+    // 1b. Synchronize structured projects to relational StudentProject table
+    if (Array.isArray(data.projects)) {
+      const validProjects = data.projects.filter(
+        (p) => p && typeof p === "object" && p.title && p.title.trim().length > 0
+      );
+      if (validProjects.length > 0) {
+        await db.studentProject.deleteMany({ where: { userId: session.userId } });
+        await db.studentProject.createMany({
+          data: validProjects.map((p) => ({
+            userId: session.userId,
+            title: p.title.trim(),
+            role: p.role?.trim() || null,
+            description: p.description?.trim() || "Executed practical deliverables.",
+            toolsOrTechnologies: p.technologies?.trim() || null,
+            techStack: p.technologies
+              ? JSON.stringify(p.technologies.split(/[,+]/).map((t) => t.trim()).filter(Boolean))
+              : null,
+            projectUrl: p.url?.trim() || null,
+            dataOrigin: "STUDENT_INPUT",
+            isVerified: false,
+          })),
+        });
+      }
+    }
 
     // 2. Synchronize core User record (Name & Mobile)
     const normalizedMobile = data.mobile

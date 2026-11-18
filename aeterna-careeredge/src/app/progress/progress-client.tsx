@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { StudentLayout } from "@/components/layouts/student-layout";
+import { HowItWorksPanel } from "@/components/guidance/how-it-works-panel";
 import {
   Clock,
   CheckCircle2,
@@ -101,6 +102,9 @@ export function ProgressClient({ studentName }: ProgressClientProps) {
             </Link>
           </div>
         </div>
+
+        {/* Guidance Helper */}
+        <HowItWorksPanel toolKey="progress-ledger" />
 
         {/* Filters */}
         <div className="bg-white rounded-2xl border border-gray-200 p-2 shadow-sm flex items-center gap-2 overflow-x-auto scrollbar-none">

@@ -341,8 +341,14 @@ export function runLocalResumeChecks(
 
   overallHealthScore = Math.max(30, Math.min(100, overallHealthScore));
 
-  // Estimate page count: ~400 words per single-column A4 page
-  const estimatedPageCount = totalWords <= 450 ? 1 : totalWords <= 950 ? 2 : 3;
+  // Estimate page count: ~400 words per single-column A4 page (strict 1 page when fitToOnePage is enabled)
+  const estimatedPageCount = resume.style.page?.fitToOnePage
+    ? 1
+    : totalWords <= 450
+    ? 1
+    : totalWords <= 950
+    ? 2
+    : 3;
 
   return {
     overallHealthScore,

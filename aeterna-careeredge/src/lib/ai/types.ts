@@ -52,6 +52,10 @@ export interface AiTaskRequest {
   customPrompt?: string;
   schemaDescription: string;
   userId?: string;
+  documentAttachment?: {
+    mimeType: string;
+    base64Data: string;
+  };
 }
 
 export interface AiTokenUsage {

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { StudentLayout } from "@/components/layouts/student-layout";
+import { HowItWorksPanel } from "@/components/guidance/how-it-works-panel";
 import { Settings, User } from "lucide-react";
 import Link from "next/link";
 
@@ -27,6 +28,9 @@ export default async function SettingsPage() {
           </div>
 
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Settings</h1>
+
+          {/* Guidance Helper */}
+          <HowItWorksPanel toolKey="settings" />
 
           <div className="bg-white rounded-2xl border border-stone-200 p-6 space-y-6 shadow-xs">
             <h2 className="text-sm font-bold text-gray-900 border-b border-stone-100 pb-3 flex items-center gap-2">

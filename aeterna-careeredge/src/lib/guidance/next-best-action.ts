@@ -63,31 +63,20 @@ export const NEXT_ACTION_RULES: Array<{
     }),
   },
   {
-    id: "ADD_FIRST_EVIDENCE",
-    priority: 3,
-    condition: (ctx) => ctx.onboardingCompleted && ctx.evidenceCount === 0,
-    buildAction: () => ({
-      id: "ADD_FIRST_EVIDENCE",
-      priority: 3,
-      title: "Add your first piece of proof",
-      description: "Upload a certificate, mark sheet, or project link to back up your skills in the Evidence Vault.",
-      actionLabel: "Open Evidence Vault",
-      actionRoute: "/evidence-vault",
-      badgeText: "Proof Bank",
-    }),
-  },
-  {
     id: "CREATE_FIRST_RESUME",
-    priority: 4,
-    condition: (ctx) => ctx.onboardingCompleted && ctx.resumeCount === 0,
-    buildAction: () => ({
+    priority: 3,
+    condition: (ctx) => ctx.resumeCount === 0,
+    buildAction: (ctx) => ({
       id: "CREATE_FIRST_RESUME",
-      priority: 4,
-      title: "Draft your profession resume",
-      description: "Generate a clean, targeted resume built directly from your verified Career Passport.",
-      actionLabel: "Build Resume",
+      priority: 3,
+      title: ctx.passportScore < 30 ? "Upload your resume or build one" : "Draft your profession resume",
+      description:
+        ctx.passportScore < 30
+          ? "Upload your existing resume to instantly fill your Career Passport, or build a clean ATS draft from scratch."
+          : "Generate a clean, targeted resume built directly from your verified Career Passport.",
+      actionLabel: ctx.passportScore < 30 ? "Upload or Build" : "Build Resume",
       actionRoute: "/resume",
-      badgeText: "Resume Builder",
+      badgeText: "Resume Studio",
     }),
   },
   {

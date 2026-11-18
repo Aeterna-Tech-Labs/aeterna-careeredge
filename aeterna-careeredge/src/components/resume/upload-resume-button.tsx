@@ -1,0 +1,190 @@
+"use client";
+
+// src/components/resume/upload-resume-button.tsx
+// Universal "Upload Your Resume" trigger component with variants for Dashboard,
+// Resume Studio, Onboarding, Job Application Packs, and ATS Checker.
+
+import React, { useState } from "react";
+import { UploadCloud, FileUp, Sparkles, ArrowRight } from "lucide-react";
+import { UploadResumeModal } from "./upload-resume-modal";
+
+export interface UploadResumeButtonProps {
+  variant?: "primary-card" | "button" | "outline" | "compact" | "banner";
+  label?: string;
+  sublabel?: string;
+  className?: string;
+  defaultTargetRole?: string;
+  onSuccess?: (result: { resumeId?: string | null; passportScore?: number | null }) => void;
+}
+
+export function UploadResumeButton({
+  variant = "button",
+  label,
+  sublabel,
+  className = "",
+  defaultTargetRole = "",
+  onSuccess,
+}: UploadResumeButtonProps) {
+  const [modalOpen, setModalOpen] = useState(false);
+
+  // Variant 1: Primary Hero Card (for Resume Studio start screen or Dashboard)
+  if (variant === "primary-card") {
+    return (
+      <>
+        <div
+          onClick={() => setModalOpen(true)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setModalOpen(true);
+            }
+          }}
+          className={`group relative flex flex-col justify-between rounded-2xl border-2 border-dashed border-[#F2B63D] bg-gradient-to-br from-[#FFF9ED] via-white to-[#FDF7F5] p-5 text-left cursor-pointer hover:border-[#7A0F1F] hover:shadow-md transition-all ${className}`}
+        >
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#7A0F1F] px-2.5 py-0.5 text-[10px] font-bold text-white uppercase tracking-wider">
+                <Sparkles size={10} className="text-[#F2B63D]" />
+                <span>Fastest Import</span>
+              </span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white border border-[#EBDDD1] text-[#7A0F1F] group-hover:scale-105 transition-transform shadow-2xs">
+                <UploadCloud size={16} />
+              </div>
+            </div>
+
+            <h3 className="mt-3 font-heading text-base font-bold text-[#2B1B1B]">
+              {label || "Upload Existing Resume"}
+            </h3>
+            <p className="mt-1 text-xs text-[#765F5D] leading-relaxed">
+              {sublabel ||
+                "Upload your PDF or Word resume. We extract your degrees, experience, and skills into ATS-ready format with full review."}
+            </p>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-[#EBDDD1]/60 flex items-center gap-1.5 text-xs font-bold text-[#7A0F1F] group-hover:gap-2 transition-all">
+            <span>Choose File or Drag & Drop</span>
+            <ArrowRight size={13} />
+          </div>
+        </div>
+
+        <UploadResumeModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          defaultTargetRole={defaultTargetRole}
+          onSuccess={onSuccess}
+        />
+      </>
+    );
+  }
+
+  // Variant 2: Banner (for Onboarding / Passport top notice)
+  if (variant === "banner") {
+    return (
+      <>
+        <div
+          className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-[#F2B63D] bg-[#FFF9ED] p-4 text-[#2B1B1B] shadow-2xs ${className}`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#7A0F1F] text-[#F2B63D] shadow-xs">
+              <FileUp size={18} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-[#7A0F1F]">
+                {label || "Already have a resume?"}
+              </p>
+              <p className="text-[11px] text-[#765F5D]">
+                {sublabel || "Upload your PDF or DOCX to auto-fill your credentials in under 30 seconds."}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#7A0F1F] px-4 py-2 text-xs font-bold text-white hover:bg-[#600C18] transition shadow-xs"
+          >
+            <UploadCloud size={14} />
+            <span>Upload Resume</span>
+          </button>
+        </div>
+
+        <UploadResumeModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          defaultTargetRole={defaultTargetRole}
+          onSuccess={onSuccess}
+        />
+      </>
+    );
+  }
+
+  // Variant 3: Outline Button
+  if (variant === "outline") {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className={`inline-flex items-center gap-2 rounded-xl border border-[#7A0F1F] bg-white px-3.5 py-2 text-xs font-bold text-[#7A0F1F] hover:bg-[#FFF9ED] transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A0F1F] ${className}`}
+        >
+          <UploadCloud size={14} />
+          <span>{label || "Upload Resume"}</span>
+        </button>
+
+        <UploadResumeModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          defaultTargetRole={defaultTargetRole}
+          onSuccess={onSuccess}
+        />
+      </>
+    );
+  }
+
+  // Variant 4: Compact Toolbar Button
+  if (variant === "compact") {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className={`inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 transition ${className}`}
+          title={label || "Upload Resume"}
+        >
+          <UploadCloud size={13} className="text-[#7A0F1F]" />
+          <span>{label || "Upload"}</span>
+        </button>
+
+        <UploadResumeModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          defaultTargetRole={defaultTargetRole}
+          onSuccess={onSuccess}
+        />
+      </>
+    );
+  }
+
+  // Default Variant: Solid Button
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setModalOpen(true)}
+        className={`inline-flex items-center gap-2 rounded-xl bg-[#7A0F1F] px-4 py-2 text-xs font-bold text-white hover:bg-[#600C18] transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A0F1F] ${className}`}
+      >
+        <UploadCloud size={14} className="text-[#F2B63D]" />
+        <span>{label || "Upload Resume"}</span>
+      </button>
+
+      <UploadResumeModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        defaultTargetRole={defaultTargetRole}
+        onSuccess={onSuccess}
+      />
+    </>
+  );
+}

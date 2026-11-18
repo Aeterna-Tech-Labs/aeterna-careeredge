@@ -1,17 +1,22 @@
 "use client";
 
+// src/features/onboarding/components/step-progress.tsx
+// Numbered stepper. Completed steps can be clicked to go back.
+// When allowAllJumps is true (e.g. edit mode or already onboarded), any step is directly jumpable.
+
 import { Check } from "lucide-react";
 import { motion } from "motion/react";
 
-/** Numbered stepper. Completed steps can be clicked to go back. */
 export function StepProgress({
   steps,
   current,
   onSelect,
+  allowAllJumps = false,
 }: {
   steps: readonly string[];
   current: number;
   onSelect: (index: number) => void;
+  allowAllJumps?: boolean;
 }) {
   return (
     <nav aria-label="Onboarding progress">
@@ -20,6 +25,7 @@ export function StepProgress({
           const done = i < current;
           const active = i === current;
           const isLast = i === steps.length - 1;
+          const isDisabled = !allowAllJumps && i > current;
 
           return (
             <li
@@ -44,7 +50,7 @@ export function StepProgress({
               <button
                 type="button"
                 onClick={() => onSelect(i)}
-                disabled={i > current}
+                disabled={isDisabled}
                 aria-current={active ? "step" : undefined}
                 aria-label={`${label}${done ? " (completed)" : ""}`}
                 className="group relative z-10 flex flex-col items-center gap-2 focus-visible:outline-none disabled:cursor-not-allowed"

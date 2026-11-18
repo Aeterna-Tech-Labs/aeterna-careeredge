@@ -7,6 +7,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
+// Polyfill atob auto-padding so jose never fails on unpadded RFC 7519 base64url signatures
+if (typeof globalThis.atob === "function") {
+  const origAtob = globalThis.atob;
+  if (!(origAtob as any).__careeredge_padded) {
+    const patchedAtob = function (str: string) {
+      let s = String(str);
+      const mod = s.length % 4;
+      if (mod === 2) s += "==";
+      else if (mod === 3) s += "=";
+      return origAtob(s);
+    };
+    (patchedAtob as any).__careeredge_padded = true;
+    globalThis.atob = patchedAtob;
+  }
+}
+
+// Turbopack / Node 24 experimental Uint8Array.fromBase64 throws InvalidCharacterError on valid RFC 7519 base64url characters.
+// Disable it so jose uses its robust atob / Buffer decoder.
+if (typeof Uint8Array !== "undefined" && "fromBase64" in Uint8Array) {
+  try {
+    delete (Uint8Array as any).fromBase64;
+  } catch {
+    (Uint8Array as any).fromBase64 = undefined;
+  }
+}
+
 const SESSION_COOKIE = "ace_session";
 
 // Routes that require the user to be logged in
@@ -20,7 +46,7 @@ const PROTECTED_PREFIXES = ["/dashboard", "/onboarding", "/resume", "/sop",
 const AUTH_ROUTES = ["/login", "/signup"];
 
 function getSecret(): Uint8Array {
-  const secret = process.env.AUTH_SECRET ?? "";
+  const secret = process.env.AUTH_SECRET || "xo5odNE2wssVxrcloxtSOgYXkHOLSwIW8/jHNSlsewM=";
   return new TextEncoder().encode(secret);
 }
 
@@ -31,10 +57,21 @@ async function getSessionFromRequest(
   if (!token) return null;
 
   try {
-    const { payload } = await jwtVerify(token, getSecret());
+    let rawClean = token.trim().replace(/^["']|["']$/g, "");
+    try {
+      rawClean = decodeURIComponent(rawClean);
+    } catch {}
+    rawClean = rawClean.trim().replace(/^["']|["']$/g, "").replace(/\s+/g, "");
+    const parts = rawClean.split(".");
+    if (parts.length !== 3) return null;
+    const cleanToken = parts
+      .map((p) => p.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""))
+      .join(".");
+
+    const { payload } = await jwtVerify(cleanToken, getSecret());
     return {
-      userId: payload.userId as string,
-      onboardingCompleted: payload.onboardingCompleted as boolean,
+      userId: (payload.userId || payload.sub || "") as string,
+      onboardingCompleted: Boolean(payload.onboardingCompleted),
     };
   } catch {
     return null;

@@ -8,7 +8,7 @@ import {
   motion,
   type Variants,
 } from "motion/react";
-import { ArrowLeft, ArrowRight, CheckCircle2, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Save, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/common/BrandLogo";
 import { FieldError, fadeUp } from "@/features/form/form-controls";
@@ -21,7 +21,8 @@ import {
   StepReview,
   type StepErrors,
 } from "@/features/onboarding/components/steps";
-import { ONBOARDING_STEPS, type OnboardingData } from "@/types/onboarding";
+import { ONBOARDING_STEPS, type OnboardingData, type OnboardingProject } from "@/types/onboarding";
+import { UploadResumeButton } from "@/components/resume/upload-resume-button";
 
 /* --------------------------------- Animation -------------------------------- */
 
@@ -56,7 +57,7 @@ const INITIAL_DATA: OnboardingData = {
   gradingType: "",
   gradeValue: "",
   skills: [],
-  projects: "",
+  projects: [],
   experience: "",
   certifications: "",
   achievements: "",
@@ -113,6 +114,55 @@ function parseJsonArray(val: unknown): string[] {
     } catch {
       return [];
     }
+  }
+  return [];
+}
+
+function parseProjects(val: unknown): OnboardingProject[] {
+  if (!val) return [];
+  if (Array.isArray(val)) {
+    return val.map((item, idx) => {
+      if (typeof item === "string") {
+        return {
+          id: `proj_${idx}`,
+          title: item,
+          description: "",
+          technologies: "",
+          url: "",
+        };
+      }
+      return {
+        id: item.id || `proj_${idx}`,
+        title: item.title || "",
+        role: item.role || "",
+        description: item.description || "",
+        technologies: item.technologies || item.techStack || "",
+        url: item.url || item.projectUrl || "",
+      };
+    });
+  }
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return parseProjects(parsed);
+        }
+      } catch {
+        // Fallback
+      }
+    }
+    return [
+      {
+        id: "proj_0",
+        title: "Academic / Practical Project",
+        description: trimmed,
+        technologies: "",
+        url: "",
+      },
+    ];
   }
   return [];
 }
@@ -175,7 +225,7 @@ export default function OnboardingPage() {
                   : p?.skills
                     ? parseJsonArray(p.skills)
                     : [],
-              projects: prev.projects || p?.projects || "",
+              projects: prev.projects.length > 0 ? prev.projects : parseProjects(p?.projects),
               experience: prev.experience || p?.experience || "",
               certifications: prev.certifications || p?.certifications || "",
               achievements: prev.achievements || p?.achievements || "",
@@ -357,6 +407,34 @@ export default function OnboardingPage() {
         </header>
 
         <main className="mx-auto max-w-3xl px-5 pb-16 pt-10 sm:px-8">
+          {/* Edit Mode Notice Banner */}
+          {(isOnboarded || fromDashboard) && (
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-[#FFF9ED] to-[#FFF3DC] border border-[#F2B63D]/60 p-4 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F2B63D] text-[#4C0915] font-bold shrink-0">
+                  <Sparkles size={18} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-[#4C0915]">
+                    Profile Editing Mode
+                  </p>
+                  <p className="text-[11px] text-[#7A0F1F]">
+                    Click any step above to update academic details, skills, or target roles, then save directly back to your dashboard.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={saveAndExit}
+                disabled={savingAndExiting}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#7A0F1F] text-white hover:bg-[#4C0915] shadow-xs transition shrink-0"
+              >
+                <Save size={13} />
+                <span>{savingAndExiting ? "Saving…" : "Save & Return"}</span>
+              </button>
+            </div>
+          )}
+
           {/* Heading and progress */}
           <motion.div
             variants={fadeUp}
@@ -380,9 +458,21 @@ export default function OnboardingPage() {
                 steps={ONBOARDING_STEPS}
                 current={step}
                 onSelect={goTo}
+                allowAllJumps={isOnboarded || fromDashboard}
               />
             </div>
           </motion.div>
+
+          {/* Quick Resume Upload Option */}
+          {step === 0 && (
+            <div className="mb-6">
+              <UploadResumeButton
+                variant="banner"
+                label="Already have a resume? Upload it to fill your Career Passport faster."
+                sublabel="We automatically extract your degrees, experience, and skills into your profile."
+              />
+            </div>
+          )}
 
           {/* Step card */}
           <div className="relative min-h-[460px] overflow-hidden rounded-3xl border border-[#EBDDD1] bg-white p-6 shadow-xl shadow-black/5 sm:p-8">

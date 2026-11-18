@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { StudentLayout } from "@/components/layouts/student-layout";
+import { HowItWorksPanel } from "@/components/guidance/how-it-works-panel";
 import {
   Briefcase,
   Search,
@@ -151,19 +152,19 @@ export function JobsClient({ studentName: _studentName }: JobsClientProps) {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#7A0F1F]/10 text-[#7A0F1F]">
                 <Briefcase className="w-3.5 h-3.5" />
                 Multi-Domain Market Exploration
               </span>
-              <span className="text-xs text-gray-700 bg-white px-2 py-0.5 rounded border border-gray-200">
-                Truthful Requirement Matching
+              <span className="text-xs text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-semibold">
+                Sample listings (Live feeds connecting)
               </span>
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mt-2">
               Find Verified Career Opportunities
             </h1>
-            <p className="text-sm text-gray-700 mt-1">
+            <p className="text-sm text-gray-700 mt-1 max-w-2xl">
               Explore authentic openings tailored to your domain. Match scores measure factual requirement alignment from your Career Passport — never false hiring guarantees.
             </p>
           </div>
@@ -185,6 +186,9 @@ export function JobsClient({ studentName: _studentName }: JobsClientProps) {
             </Link>
           </div>
         </div>
+
+        {/* Guidance helper */}
+        <HowItWorksPanel toolKey="job-discovery" />
 
         {/* Notification Toast */}
         {saveActionMessage && (

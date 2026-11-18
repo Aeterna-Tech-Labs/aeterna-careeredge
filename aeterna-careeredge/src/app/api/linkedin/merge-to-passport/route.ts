@@ -4,7 +4,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
+import {
+  upsertEducationRecord,
+  upsertSkillRecord,
+  upsertExperienceRecord,
+} from "@/lib/passport/deduplication";
+import { recalculateAndSavePassportScore } from "@/lib/passport/score";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,80 +28,47 @@ export async function POST(req: NextRequest) {
 
     let mergedCount = 0;
 
-    // 1. Merge Approved Skills
+    // 1. Merge Approved Skills (Deduplicated)
     for (const skillName of approvedSkills) {
       const clean = (skillName as string).trim();
       if (!clean) continue;
 
-      const existing = await prisma.studentSkill.findFirst({
-        where: { userId: session.userId, name: clean },
+      await upsertSkillRecord(session.userId, {
+        name: clean,
+        category: "Technical / Core",
+        proficiencyLevel: "INTERMEDIATE",
+        dataOrigin: provenance,
       });
-
-      if (!existing) {
-        await prisma.studentSkill.create({
-          data: {
-            userId: session.userId,
-            name: clean,
-            category: "Technical / Core",
-            proficiencyLevel: "INTERMEDIATE",
-            dataOrigin: provenance,
-          },
-        });
-        mergedCount++;
-      }
+      mergedCount++;
     }
 
-    // 2. Merge Approved Educations
+    // 2. Merge Approved Educations (Deduplicated)
     for (const edu of approvedEducations) {
       if (!edu.institution || !edu.degree) continue;
 
-      const existing = await prisma.educationRecord.findFirst({
-        where: {
-          userId: session.userId,
-          institution: edu.institution,
-          degree: edu.degree,
-        },
+      await upsertEducationRecord(session.userId, {
+        institution: edu.institution,
+        degree: edu.degree,
+        level: "UG",
+        dataOrigin: provenance,
       });
-
-      if (!existing) {
-        await prisma.educationRecord.create({
-          data: {
-            userId: session.userId,
-            level: "UG",
-            institution: edu.institution,
-            degree: edu.degree,
-            dataOrigin: provenance,
-          },
-        });
-        mergedCount++;
-      }
+      mergedCount++;
     }
 
-    // 3. Merge Approved Experiences
+    // 3. Merge Approved Experiences (Deduplicated)
     for (const exp of approvedExperiences) {
       if (!exp.company || !exp.title) continue;
 
-      const existing = await prisma.studentExperience.findFirst({
-        where: {
-          userId: session.userId,
-          companyName: exp.company,
-          jobTitle: exp.title,
-        },
+      await upsertExperienceRecord(session.userId, {
+        companyName: exp.company,
+        jobTitle: exp.title,
+        description: exp.description || "",
+        dataOrigin: provenance,
       });
-
-      if (!existing) {
-        await prisma.studentExperience.create({
-          data: {
-            userId: session.userId,
-            companyName: exp.company,
-            jobTitle: exp.title,
-            description: exp.description || "",
-            dataOrigin: provenance,
-          },
-        });
-        mergedCount++;
-      }
+      mergedCount++;
     }
+
+    await recalculateAndSavePassportScore(session.userId);
 
     return NextResponse.json({
       success: true,

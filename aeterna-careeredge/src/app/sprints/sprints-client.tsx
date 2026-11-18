@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { StudentLayout } from "@/components/layouts/student-layout";
+import { HowItWorksPanel } from "@/components/guidance/how-it-works-panel";
 import {
   Zap,
   CheckCircle2,
@@ -154,6 +155,9 @@ export function SprintsClient({
             </button>
           </div>
         </div>
+
+        {/* Guidance Helper */}
+        <HowItWorksPanel toolKey="gap-to-action-sprint" />
 
         {/* Active Sprint Overview Card */}
         {loading ? (

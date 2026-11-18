@@ -19,8 +19,10 @@ import {
   Key,
   MessageSquare,
   Check,
+  UploadCloud,
 } from "lucide-react";
 import type { ResumeIntelligenceReport } from "@/lib/resume/intelligence";
+import { UploadResumeButton } from "@/components/resume/upload-resume-button";
 
 interface ResumeCheckClientProps {
   user: {
@@ -110,37 +112,65 @@ export function ResumeCheckClient({
           </div>
         )}
 
-        {/* Console Card */}
-        <div className="rounded-2xl border border-[#EBDDD1] bg-white p-6 shadow-sm space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-bold text-[#2B1810]">
-                Select Resume Version *
-              </label>
-              <select
-                value={selectedResumeId}
-                onChange={(e) => setSelectedResumeId(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-[#EBDDD1] bg-white px-3.5 py-2.5 text-xs text-[#2B1810] focus:border-[#7A0F1F] focus:outline-hidden"
-              >
-                {resumes.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.title} ({r.targetRole || "General"})
-                  </option>
-                ))}
-              </select>
+        {/* Resumes Empty State */}
+        {resumes.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-[#EBDDD1] bg-white p-10 text-center space-y-4">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#FFF0D4] text-[#7A0F1F]">
+              <UploadCloud size={24} />
             </div>
-
-            <div className="flex items-end justify-end">
-              <Link
-                href={`/resume/builder?id=${selectedResumeId}`}
-                className="text-xs font-bold text-[#7A0F1F] hover:underline"
-              >
-                Open in Resume Builder →
-              </Link>
+            <div className="space-y-1">
+              <h3 className="font-heading text-base font-bold text-stone-900">
+                Upload a Resume to Analyze
+              </h3>
+              <p className="text-xs text-stone-600 max-w-md mx-auto">
+                You haven&apos;t created or imported any resumes yet. Upload an existing PDF or Word resume to test ATS keyword match.
+              </p>
+            </div>
+            <div className="flex justify-center pt-2">
+              <UploadResumeButton
+                variant="button"
+                label="Upload Resume for Analysis"
+                onSuccess={() => window.location.reload()}
+              />
             </div>
           </div>
+        ) : (
+          /* Console Card */
+          <div className="rounded-2xl border border-[#EBDDD1] bg-white p-6 shadow-sm space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-bold text-[#2B1810]">
+                  Select Resume Version *
+                </label>
+                <select
+                  value={selectedResumeId}
+                  onChange={(e) => setSelectedResumeId(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-[#EBDDD1] bg-white px-3.5 py-2.5 text-xs text-[#2B1810] focus:border-[#7A0F1F] focus:outline-hidden"
+                >
+                  {resumes.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.title} ({r.targetRole || "General"})
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <div>
+              <div className="flex items-end justify-between sm:justify-end gap-3">
+                <UploadResumeButton
+                  variant="outline"
+                  label="Upload Another Resume"
+                  onSuccess={() => window.location.reload()}
+                />
+                <Link
+                  href={`/resume/builder?id=${selectedResumeId}`}
+                  className="text-xs font-bold text-[#7A0F1F] hover:underline flex items-center gap-1"
+                >
+                  Open Editor →
+                </Link>
+              </div>
+            </div>
+
+            <div>
             <label className="block text-xs font-bold text-[#2B1810]">
               Paste Job Description (Optional for JD Alignment)
             </label>
@@ -169,6 +199,7 @@ export function ResumeCheckClient({
             </button>
           </div>
         </div>
+        )}
 
         {/* Results Report */}
         {report && (

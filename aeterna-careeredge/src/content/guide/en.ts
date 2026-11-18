@@ -110,6 +110,48 @@ export const GUIDE_SECTIONS: Record<string, SectionGuide> = {
     whatToDo: "Ask any question, or pick one of the suggested prompts.",
     whatYouGet: "Short, honest answers and direct buttons to the right screen. It never guesses or makes things up.",
   },
+  "progress-ledger": {
+    id: "progress-ledger",
+    title: "Progress Ledger",
+    whatThisIs: "An audit trail of all your verified career achievements, profile updates, and milestone completions.",
+    whatToDo: "Review your timeline as you complete courses, deposit evidence, and draft resumes.",
+    whatYouGet: "A clear record of verified growth you can share with mentors and placement advisors.",
+  },
+  "value-roi": {
+    id: "value-roi",
+    title: "Value & Impact ROI",
+    whatThisIs: "Your career investment summary showing readiness gains and estimated placement value.",
+    whatToDo: "Track how closing skill gaps increases your competitiveness for high-paying roles.",
+    whatYouGet: "Tangible measures of your placement readiness compared to industry benchmarks.",
+  },
+  "pricing": {
+    id: "pricing",
+    title: "Pricing & Plans",
+    whatThisIs: "Clear, transparent subscription plans calibrated for students across Karnataka.",
+    whatToDo: "Compare features between Free and Pro tiers to pick what fits your placement cycle.",
+    whatYouGet: "Complete access with zero hidden fees or predatory auto-renewals.",
+  },
+  "settings": {
+    id: "settings",
+    title: "Settings & Privacy",
+    whatThisIs: "Your central account, notification, and recruiter consent controls.",
+    whatToDo: "Update your contact information and toggle recruiter profile unlock consent.",
+    whatYouGet: "100% control over your personal career data and privacy.",
+  },
+  "sop-builder": {
+    id: "sop-builder",
+    title: "Statement of Purpose Builder",
+    whatThisIs: "Draft domain-specific Statements of Purpose calibrated for admissions and job applications.",
+    whatToDo: "This feature is currently in development. Preview upcoming capabilities here.",
+    whatYouGet: "Authentic, academic-integrity checked essays grounded in your real achievements.",
+  },
+  "career-counselling": {
+    id: "career-counselling",
+    title: "1-on-1 Counselling",
+    whatThisIs: "Personal mentorship sessions with domain industry specialists and alumni placement advisors.",
+    whatToDo: "This mentorship booking system is launching soon. Check back for booking slots.",
+    whatYouGet: "Direct personalized advice from verified senior professionals in your field.",
+  },
 };
 
 /**

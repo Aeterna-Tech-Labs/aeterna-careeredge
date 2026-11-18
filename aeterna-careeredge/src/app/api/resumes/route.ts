@@ -136,20 +136,59 @@ export async function POST(req: NextRequest) {
               : [],
         projects:
           user.projects.length > 0
-            ? user.projects.map((p) => ({
-                title: p.title,
-                techStack: p.toolsOrTechnologies ? [p.toolsOrTechnologies] : [],
-                url: p.projectUrl || p.artifactUrl || undefined,
-                description: p.description || "",
-              }))
+            ? user.projects.map((p) => {
+                let techList: string[] = [];
+                if (p.techStack) {
+                  try {
+                    const parsed = JSON.parse(p.techStack);
+                    if (Array.isArray(parsed)) techList = parsed;
+                  } catch {
+                    techList = [p.techStack];
+                  }
+                } else if (p.toolsOrTechnologies) {
+                  techList = p.toolsOrTechnologies.split(/[,+]/).map((t) => t.trim()).filter(Boolean);
+                }
+                return {
+                  title: p.title,
+                  role: p.role || undefined,
+                  techStack: techList,
+                  url: p.projectUrl || p.artifactUrl || undefined,
+                  description: p.description || "",
+                };
+              })
             : user.profile?.projects
-              ? [
-                  {
-                    title: "Applied Practical Project",
-                    techStack: [],
-                    description: user.profile.projects,
-                  },
-                ]
+              ? (() => {
+                  const trimmed = user.profile.projects.trim();
+                  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                    try {
+                      const parsed = JSON.parse(trimmed);
+                      if (Array.isArray(parsed) && parsed.length > 0) {
+                        return parsed.map((p: Record<string, unknown>) => ({
+                          title: String(p.title || "Applied Practical Project"),
+                          role: p.role ? String(p.role) : undefined,
+                          techStack: p.technologies
+                            ? (typeof p.technologies === "string"
+                                ? p.technologies.split(/[,+]/).map((t) => t.trim()).filter(Boolean)
+                                : Array.isArray(p.technologies)
+                                  ? (p.technologies as string[])
+                                  : [])
+                            : [],
+                          url: p.url ? String(p.url) : undefined,
+                          description: String(p.description || ""),
+                        }));
+                      }
+                    } catch {
+                      // Fallback below
+                    }
+                  }
+                  return [
+                    {
+                      title: "Applied Practical Project",
+                      techStack: [],
+                      description: trimmed,
+                    },
+                  ];
+                })()
               : [],
         certifications:
           user.certifications.length > 0

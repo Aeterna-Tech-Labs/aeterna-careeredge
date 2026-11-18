@@ -33,6 +33,7 @@ interface ResumePreviewProps {
   onSelectSection?: (sectionId: string) => void;
   activeSectionId?: string;
   isPrintMode?: boolean;
+  zoom?: number;
 }
 
 export function ResumePreview({
@@ -40,6 +41,7 @@ export function ResumePreview({
   onSelectSection,
   activeSectionId,
   isPrintMode = false,
+  zoom = 100,
 }: ResumePreviewProps) {
   const { contactInfo, sections, style } = data;
 
@@ -114,8 +116,41 @@ export function ResumePreview({
         fontFamily: bodyFont,
         fontSize: `${style.fontSizes.body}px`,
         lineHeight: style.spacing.lineHeight,
+        transform: !isPrintMode && zoom && zoom !== 100 ? `scale(${zoom / 100})` : undefined,
+        transformOrigin: "top center",
       }}
     >
+      {/* ── Page Boundary Guides (Desktop Live Preview) ────────────────── */}
+      {!isPrintMode && (
+        <>
+          <div
+            className="absolute left-0 right-0 pointer-events-none flex items-center justify-between border-b-2 border-dashed border-rose-400 text-rose-700 text-[10px] font-bold px-4 py-0.5 z-20"
+            style={{ top: "1123px" }}
+            title="Standard A4 Page 1 Boundary (1123px cutoff)"
+          >
+            <span className="bg-rose-50 border border-rose-300 px-2 py-0.5 rounded shadow-xs">
+              Page 1 / Page 2 Boundary (Content below spills into Page 2)
+            </span>
+            <span className="bg-rose-50 border border-rose-300 px-2 py-0.5 rounded shadow-xs">
+              A4 Page 1 End
+            </span>
+          </div>
+
+          <div
+            className="absolute left-0 right-0 pointer-events-none flex items-center justify-between border-b-2 border-dashed border-rose-400 text-rose-700 text-[10px] font-bold px-4 py-0.5 z-20"
+            style={{ top: "2246px" }}
+            title="Standard A4 Page 2 Boundary (2246px cutoff)"
+          >
+            <span className="bg-rose-50 border border-rose-300 px-2 py-0.5 rounded shadow-xs">
+              Page 2 / Page 3 Boundary
+            </span>
+            <span className="bg-rose-50 border border-rose-300 px-2 py-0.5 rounded shadow-xs">
+              A4 Page 2 End
+            </span>
+          </div>
+        </>
+      )}
+
       {/* ── Document Header ────────────────────────────────────────────── */}
       {style.templateId === "creative-portfolio" && (
         <div
@@ -124,7 +159,9 @@ export function ResumePreview({
         />
       )}
       <header
-        className={`resume-header resume-section pb-4 mb-4 ${dividerBorderClass}`}
+        className={`resume-header resume-section ${
+          style.page?.fitToOnePage ? "pb-2 mb-2" : "pb-4 mb-4"
+        } ${dividerBorderClass}`}
         style={{
           borderColor: style.colors.accent,
           textAlign: style.layout.headerAlignment,
@@ -334,7 +371,9 @@ function RenderSectionBlock({
     >
       {/* Section Title */}
       <h2
-        className={`resume-section-heading font-bold uppercase tracking-wider pb-1 mb-2 ${dividerBorderClass} ${
+        className={`resume-section-heading font-bold uppercase tracking-wider ${
+          style.page?.fitToOnePage ? "pb-0.5 mb-1 text-xs" : "pb-1 mb-2"
+        } ${dividerBorderClass} ${
           style.layout.headerAlignment === "center" ? "text-center" : "text-left"
         }`}
         style={{
@@ -350,12 +389,13 @@ function RenderSectionBlock({
       </h2>
 
       {/* Entries */}
-      <div className="space-y-3">
+      <div className={style.page?.fitToOnePage ? "space-y-1.5" : "space-y-3"}>
         {section.entries.map((entry) => (
           <RenderEntryItem
             key={entry.id}
             entry={entry}
             sectionType={section.type}
+            displayMode={section.layoutOptions?.displayMode}
             style={style}
             formatDate={formatDate}
           />
@@ -370,18 +410,20 @@ function RenderSectionBlock({
 function RenderEntryItem({
   entry,
   sectionType: _sectionType,
+  displayMode,
   style,
   formatDate,
 }: {
   entry: ResumeEntry;
   sectionType?: string;
+  displayMode?: "bullets" | "paragraph" | "tags" | "grouped";
   style: FullResumeData["style"];
   formatDate: (d?: string) => string;
 }) {
   const hasHeader = entry.title || entry.subtitle || entry.startDate || entry.score;
 
   return (
-    <div className="resume-entry space-y-1">
+    <div className={`resume-entry ${style.page?.fitToOnePage ? "space-y-0.5" : "space-y-1"}`}>
       {hasHeader && (
         <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs">
           <div className="font-semibold text-stone-900">
@@ -432,11 +474,13 @@ function RenderEntryItem({
 
       {/* Skills or Tags */}
       {entry.tags && entry.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 pt-0.5">
+        <div className={`flex flex-wrap ${style.page?.fitToOnePage ? "gap-1 pt-0.5" : "gap-1.5 pt-0.5"}`}>
           {entry.tags.map((tag, idx) => (
             <span
               key={idx}
-              className="rounded px-2 py-0.5 text-xs font-medium"
+              className={`rounded ${
+                style.page?.fitToOnePage ? "px-1.5 py-0 text-[10px]" : "px-2 py-0.5 text-xs"
+              } font-medium`}
               style={{
                 backgroundColor:
                   style.templateId === "tech-minimal"
@@ -459,18 +503,24 @@ function RenderEntryItem({
 
       {/* Bullet Points */}
       {entry.bullets && entry.bullets.length > 0 && (
-        <ul
-          className="list-disc space-y-1 text-stone-700"
-          style={{
-            paddingLeft: `${style.spacing.bulletIndent}px`,
-          }}
-        >
-          {entry.bullets.map((b) => (
-            <li key={b.id} className="resume-bullet leading-relaxed">
-              <span>{b.text}</span>
-            </li>
-          ))}
-        </ul>
+        displayMode === "paragraph" ? (
+          <p className="leading-relaxed text-stone-700 whitespace-pre-line text-xs">
+            {entry.bullets.map((b) => b.text).join(" ")}
+          </p>
+        ) : (
+          <ul
+            className={`list-disc ${style.page?.fitToOnePage ? "space-y-0.5" : "space-y-1"} text-stone-700`}
+            style={{
+              paddingLeft: `${style.spacing.bulletIndent}px`,
+            }}
+          >
+            {entry.bullets.map((b) => (
+              <li key={b.id} className="resume-bullet leading-relaxed">
+                <span>{b.text}</span>
+              </li>
+            ))}
+          </ul>
+        )
       )}
     </div>
   );
