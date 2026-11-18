@@ -1,0 +1,1239 @@
+// Aeterna CareerEdge — Prisma Schema
+// Single Source of Student Truth: Career Passport
+// Development: SQLite (zero credentials needed)
+// Production: PostgreSQL (switch provider and update DATABASE_URL)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 1. CORE USER & AUTHENTICATION
+// ══════════════════════════════════════════════════════════════════════════════
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  mobile       String?  @unique
+  passwordHash String?  // null for OAuth-only users
+
+  // Consents & Compliance
+  counsellorConsent Boolean @default(false)
+  onboardingCompleted Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Single Source of Truth
+  profile             StudentProfile?
+  educations          EducationRecord[]
+  skills              StudentSkill[]
+  projects            StudentProject[]
+  experiences         StudentExperience[]
+  certifications      Certification[]
+  resumes             Resume[]
+  sopDocuments        SopDocument[]
+  linkedInProfile     LinkedInProfile?
+  assessments         CareerAssessment[]
+  recommendations     CareerRecommendation[]
+  applications        JobApplication[]
+  counsellingRequests CounsellingRequest[]
+  consentRecords      ConsentRecord[]
+  storedDocuments     StoredDocument[]
+  crmLeads            CrmLead[]
+  achievements        StudentAchievement[]
+  careerGoals         CareerGoal[]
+  passwordResetTokens PasswordResetToken[]
+
+  // Day 2 Relations & Foundations
+  onboardingState     OnboardingState?
+  guideSeenPanels     GuideSeenPanel[]
+  evidenceItems       EvidenceItem[]
+  truthCheckResults   TruthCheckResult[]
+  roleFitResults      RoleFitResult[]
+  sprintPlans         SprintPlan[]
+  applicationPacks    ApplicationPack[]
+  interviewPrepKits   InterviewPrepKit[]
+  progressEvents      ProgressEvent[]
+  guideConversations  GuideConversation[]
+  subscription        UserSubscription?
+  usageRecords        UsageRecord[]
+  analyticsEvents     AnalyticsEvent[]
+  resumeVersions      ResumeVersion[]
+  resumeAnalyses      ResumeAnalysisRecord[]
+
+  @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("password_reset_tokens")
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 2. STUDENT CAREER PASSPORT (CENTRAL AGGREGATE)
+// ══════════════════════════════════════════════════════════════════════════════
+
+model StudentProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Basic Information
+  city     String?
+  state    String?
+  country  String? @default("India")
+  headline String?
+  bio      String?
+
+  // Multi-Domain Academic & Professional Details
+  academicDomain   String? // e.g. "Commerce, Accounting and Finance", "Law and Legal Studies", "Healthcare"
+  specialization   String? // e.g. "Taxation & Audit", "Constitutional Law", "Clinical Nursing"
+  educationLevel   String? // e.g. "BE / B.Tech", "B.Com", "MBBS", "12th (PUC / HSC)"
+  institution      String?
+  course           String?
+  graduationYear   Int?
+
+  // Grading System & Performance Metrics
+  gradingType      String? // "CGPA" | "PERCENTAGE" | "GRADE" | "MARKS"
+  gradeValue       String? // e.g. "8.8", "88%", "Distinction"
+
+  // High-level summary fields (stored as serialized JSON for quick passport overview)
+  skills               String? // JSON string array
+  projects             String? // summary text or JSON
+  experience           String? // summary text or JSON
+  achievements         String? // summary text or JSON
+  certifications       String? // summary text or JSON
+  careerInterests      String? // JSON string array
+  preferredJobRole     String?
+  targetIndustry       String? // e.g. "Banking & Financial Services", "Healthcare", "Judiciary"
+  higherEducationGoal  String? // e.g. "Masters abroad", "PhD", "Direct placement"
+  shortTermGoal        String? // e.g. "Secure article clerkship"
+  longTermGoal         String? // e.g. "Partner at tier-1 firm"
+  studyAbroadCountries String? // JSON string array
+
+  // Passport completeness and verification metrics
+  passportScore    Int     @default(15) // percentage calculation
+  isProfileLocked  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("student_profiles")
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 3. NORMALIZED STUDENT DATA (WITH PROVENANCE & ORIGIN)
+// ══════════════════════════════════════════════════════════════════════════════
+
+model EducationRecord {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  level              String  // "10th", "12th/PUC", "Diploma", "UG", "PG", "Doctorate"
+  institution        String
+  boardOrUniversity  String? // e.g. "VTU", "CBSE", "Karnataka State Board"
+  degree             String? // e.g. "B.E.", "BCA", "M.Tech"
+  fieldOfStudy       String? // e.g. "Computer Science & Engineering"
+  startYear          Int?
+  endYear            Int?
+  scoreOrGrade       String? // e.g. "8.85" or "88.5%"
+  scoreType          String? // "CGPA" | "PERCENTAGE" | "GRADE"
+  isCurrent          Boolean @default(false)
+
+  // Data Origin: "STUDENT_INPUT" | "DOCUMENT_EXTRACTED" | "VERIFIED_REFERENCE"
+  dataOrigin         String  @default("STUDENT_INPUT")
+  isVerified         Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("education_records")
+}
+
+model StudentSkill {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name               String
+  category           String? // "TECHNICAL" | "SOFT" | "DOMAIN" | "TOOL"
+  proficiencyLevel   String? // "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | "EXPERT"
+  yearsOfExperience  Float?
+
+  // Data Origin: "STUDENT_INPUT" | "DOCUMENT_EXTRACTED" | "AI_SUGGESTION"
+  dataOrigin         String  @default("STUDENT_INPUT")
+  isVerified         Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("student_skills")
+}
+
+model StudentProject {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title              String
+  description        String
+  role               String?
+  projectType        String?   @default("ACADEMIC") // "ACADEMIC" | "RESEARCH" | "PRACTICAL" | "CREATIVE" | "CASE_STUDY"
+  toolsOrTechnologies String?  // JSON string array (e.g. ["Tally", "Excel"] or ["Figma"] or ["Python"])
+  techStack          String?   // Backward-compatible JSON string array
+  projectUrl         String?
+  artifactUrl        String?   // Portfolio link, SSRN paper, GitHub repo, Drive presentation
+  repositoryUrl      String?   // Backward-compatible code repo URL
+  startDate          DateTime?
+  endDate            DateTime?
+  isCurrent          Boolean   @default(false)
+
+  dataOrigin         String    @default("STUDENT_INPUT")
+  isVerified         Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("student_projects")
+}
+
+model StudentExperience {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  companyName        String
+  jobTitle           String
+  employmentType     String? // "INTERNSHIP" | "FULL_TIME" | "PART_TIME" | "FREELANCE"
+  experienceType     String? @default("INTERNSHIP") // "INTERNSHIP" | "WORK_EXPERIENCE" | "RESEARCH" | "CLINICAL" | "ARTICLESHIP" | "FREELANCE"
+  location           String?
+  locationType       String? // "ON_SITE" | "REMOTE" | "HYBRID"
+  startDate          DateTime?
+  endDate            DateTime?
+  isCurrent          Boolean   @default(false)
+  description        String?
+  skillsUsed         String?   // JSON string array
+
+  dataOrigin         String    @default("STUDENT_INPUT")
+  isVerified         Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("student_experiences")
+}
+
+model Certification {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title                String
+  issuingOrganization  String
+  issueDate            DateTime?
+  expiryDate           DateTime?
+  credentialId         String?
+  credentialUrl        String?
+
+  dataOrigin           String   @default("STUDENT_INPUT")
+  isVerified           Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("certifications")
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 4. CAREER TOOLKIT: RESUMES, SOPS, LINKEDIN
+// ══════════════════════════════════════════════════════════════════════════════
+
+model Resume {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title          String   @default("My Resume")
+  targetRole     String?
+  templateId     String   @default("standard-modern")
+  structuredData String?  // JSON document representation (sections, entries, etc.)
+  styleData      String?  // JSON style settings (colors, fonts, sizes, spacing, layout)
+  atsScore       Int?
+  feedback       String?  // JSON analysis breakdown
+  documentId     String?  // References StoredDocument if exported
+  contentHash    String?  // SHA-256 hash of active content
+  lastAnalyzedAt DateTime?
+
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  versions       ResumeVersion[]
+  analyses       ResumeAnalysisRecord[]
+
+  @@index([userId])
+  @@map("resumes")
+}
+
+model ResumeVersion {
+  id          String   @id @default(cuid())
+  resumeId    String
+  resume      Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  versionName String   @default("Saved Version")
+  snapshot    String   // Full JSON snapshot of structuredData, styleData, targetRole
+  contentHash String   // Hash of the content for analysis validity
+  changeNote  String?  // e.g. "Accepted AI suggestion for experience"
+  createdAt   DateTime @default(now())
+
+  analyses    ResumeAnalysisRecord[]
+
+  @@index([resumeId])
+  @@index([userId])
+  @@map("resume_versions")
+}
+
+model ResumeAnalysisRecord {
+  id                  String         @id @default(cuid())
+  resumeId            String
+  resume              Resume         @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeVersionId     String?
+  resumeVersion       ResumeVersion? @relation(fields: [resumeVersionId], references: [id], onDelete: SetNull)
+  userId              String
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  contentHash         String         // Hash of resume content when analysis was run
+  overallScore        Int
+  overallSummary      String
+  priorityFixes       String         // JSON array of top priority fixes
+  sectionAnalyses     String         // JSON array of section results
+  crossSectionIssues  String         // JSON array of cross-section issues
+  atsReadability      String         // JSON object of ATS findings
+  jdComparison        String?        // JSON object of JD comparison if JD was provided
+  isAiGenerated       Boolean        @default(true)
+  createdAt           DateTime       @default(now())
+
+  @@index([resumeId])
+  @@index([userId])
+  @@index([contentHash])
+  @@map("resume_analyses")
+}
+
+model SopDocument {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title            String   @default("Statement of Purpose")
+  targetUniversity String?
+  targetProgram    String?
+  guidelinesPrompt String?
+  draftContent     String?
+  wordCount        Int?     @default(0)
+  feedback         String?  // JSON review feedback
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
+  @@map("sop_documents")
+}
+
+model LinkedInProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  profileUrl         String?
+  linkedInSubId      String?
+  linkedInName       String?
+  linkedInEmail      String?
+  linkedInPictureUrl String?
+  connectedAt        DateTime?
+
+  headlineSuggestion String?
+  summarySuggestion  String?
+  actionItems        String? // JSON array of recommendations
+  optimizationScore  Int?
+  importedRawJson    String? // Staged parsed profile data from PDF/Text
+  sectionsJson       String? // JSON of section-by-section optimizations
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("linkedin_profiles")
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 5. ASSESSMENTS, RECOMMENDATIONS & APPLICATIONS
+// ══════════════════════════════════════════════════════════════════════════════
+
+model CareerAssessment {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  assessmentType String // "RIASEC" | "SKILL_BENCHMARK" | "EMPLOYABILITY_INDEX"
+  responsesJson  String // JSON of raw answers
+  scoresJson     String // JSON of computed dimensions
+  dominantTraits String? // JSON array e.g. ["Investigative", "Artistic"]
+
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  recommendations CareerRecommendation[]
+
+  @@index([userId])
+  @@map("career_assessments")
+}
+
+model CareerRecommendation {
+  id           String            @id @default(cuid())
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessmentId String?
+  assessment   CareerAssessment? @relation(fields: [assessmentId], references: [id], onDelete: SetNull)
+
+  careerTitle        String
+  domain             String
+  matchPercentage    Int
+  rationale          String
+  requiredSkillsJson String? // JSON array
+  recommendedCourses String? // JSON array
+
+  // AI provenance
+  isAiGenerated      Boolean @default(true)
+  isStudentReviewed  Boolean @default(false)
+  studentDecision    String? // "INTERESTED" | "EXPLORING" | "DISMISSED"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([assessmentId])
+  @@map("career_recommendations")
+}
+
+model JobApplication {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  jobTitle          String
+  companyName       String
+  jobListingRefId   String? // References ReferenceJobListing if sourced internally
+  jobUrl            String?
+  location          String?
+  salary            String?
+  employmentType    String?
+  applicationStatus String  @default("SAVED") // "SAVED" | "VISITED" | "APPLIED" | "SHORTLISTED" | "INTERVIEWING" | "OFFER" | "REJECTED" | "WITHDRAWN"
+  appliedDate       DateTime?
+  notes             String?
+  followUpDate      DateTime?
+  statusHistoryJson String? @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("job_applications")
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 6. COUNSELLING & CRM HANDOVER (AETERNA ONE INTEGRATION)
+// ══════════════════════════════════════════════════════════════════════════════
+
+model CounsellingRequest {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  topic             String  // "CAREER_PATH" | "STUDY_ABROAD" | "RESUME_REVIEW" | "INTERVIEW_PREP"
+  preferredMode     String  @default("VIDEO") // "CALL" | "VIDEO" | "IN_PERSON"
+  preferredLanguage String  @default("English") // "English" | "Kannada" | "Hindi"
+  notes             String?
+  status            String  @default("PENDING") // "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED"
+  scheduledFor      DateTime?
+
+  // Sister CRM Linkage (Aeterna One)
+  crmSyncStatus     String  @default("PENDING") // "PENDING" | "SYNCED" | "FAILED"
+  crmLeadId         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("counselling_requests")
+}
+
+model CrmLead {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  leadType          String  @default("STUDENT_COUNSELLING")
+  name              String
+  email             String
+  mobile            String?
+  city              String?
+  state             String?
+  educationLevel    String?
+  institution       String?
+  course            String?
+  careerInterest    String?
+  counsellorConsent Boolean @default(false)
+
+  // Status with Aeterna One
+  syncStatus        String  @default("PENDING") // "PENDING" | "SYNCED" | "FAILED"
+  syncAttempts      Int     @default(0)
+  lastSyncAttempt   DateTime?
+  externalCrmId     String? // returned by Aeterna One on successful webhook
+  errorMessage      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  syncLogs  CrmSyncLog[]
+
+  @@index([userId])
+  @@index([syncStatus])
+  @@map("crm_leads")
+}
+
+model CrmSyncLog {
+  id          String   @id @default(cuid())
+  leadId      String
+  crmLead     CrmLead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  attemptedAt DateTime @default(now())
+  endpointUrl String
+  requestData String   // sanitized JSON
+  statusCode  Int?
+  responseData String?
+  errorMessage String?
+  isSuccess   Boolean  @default(false)
+
+  @@index([leadId])
+  @@map("crm_sync_logs")
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 7. COMPLIANCE & CONSENT AUDIT
+// ══════════════════════════════════════════════════════════════════════════════
+
+model ConsentRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  consentType String   // "TERMS_AND_PRIVACY" | "COUNSELLOR_CONTACT" | "RECRUITER_DATA_SHARING" | "AI_PROCESSING"
+  isGranted   Boolean  @default(true)
+  grantedAt   DateTime @default(now())
+  revokedAt   DateTime?
+  ipAddress   String?
+  userAgent   String?
+  version     String   @default("1.0")
+
+  @@index([userId])
+  @@index([consentType])
+  @@map("consent_records")
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 8. PRIVATE OBJECT & DOCUMENT STORAGE METADATA
+// ══════════════════════════════════════════════════════════════════════════════
+
+model StoredDocument {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  originalFileName String
+  storageKey       String   @unique // Internal key in private storage / S3 bucket
+  mimeType         String
+  fileSizeBytes    Int
+  category         String   @default("OTHER") // "RESUME" | "TRANSCRIPT" | "CERTIFICATE" | "SOP" | "OTHER"
+  isPrivate        Boolean  @default(true)
+  storageEngine    String   @default("LOCAL_PRIVATE") // "LOCAL_PRIVATE" | "S3" | "R2"
+
+  evidenceItems    EvidenceItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("stored_documents")
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 9. RESEARCH & VERIFIED REFERENCE REPOSITORIES (SOURCE PROVENANCE)
+// ══════════════════════════════════════════════════════════════════════════════
+
+model DataSource {
+  id                String   @id @default(cuid())
+  name              String   @unique // e.g. "AISHE / Ministry of Education", "National Career Service", "VTU Official Portal"
+  sourceUrl         String
+  category          String   // "GOVERNMENT" | "UNIVERSITY_PORTAL" | "EMPLOYER_OFFICIAL" | "APPROVED_API"
+  reliabilityScore  Float    @default(1.0)
+  verificationNotes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  institutions   ReferenceInstitution[]
+  courses        ReferenceCourse[]
+  occupations    ReferenceOccupation[]
+  skills         ReferenceSkill[]
+  jobListings    ReferenceJobListing[]
+  destinations   ReferenceStudyDestination[]
+  admissionReqs  ReferenceAdmissionRequirement[]
+  scholarships   ReferenceScholarship[]
+
+  @@map("data_sources")
+}
+
+model ReferenceInstitution {
+  id                 String      @id @default(cuid())
+  sourceId           String
+  source             DataSource  @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  name               String
+  institutionCode    String?     @unique // e.g. AISHE code
+  institutionType    String      // "CENTRAL_UNIV" | "STATE_UNIV" | "PRIVATE" | "AUTONOMOUS" | "AFFILIATED"
+  state              String
+  city               String
+  country            String      @default("India")
+  websiteUrl         String
+  accreditationGrade String?     // e.g. "NAAC A++", "NIRF Rank 45"
+  affiliatingUniv    String?     // e.g. "Visvesvaraya Technological University"
+
+  // Provenance fields
+  sourceUrl          String
+  retrievedDate      DateTime    @default(now())
+  lastVerifiedDate   DateTime    @default(now())
+  verificationStatus String      @default("VERIFIED") // "VERIFIED" | "PENDING_REVIEW" | "DEPRECATED"
+  validUntil         DateTime?
+
+  courses            ReferenceCourse[]
+  admissionReqs      ReferenceAdmissionRequirement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sourceId])
+  @@index([name])
+  @@index([state])
+  @@map("reference_institutions")
+}
+
+model ReferenceCourse {
+  id                 String               @id @default(cuid())
+  sourceId           String
+  source             DataSource           @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  institutionId      String?
+  institution        ReferenceInstitution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+
+  title              String
+  degreeLevel        String               // "UG" | "PG" | "DIPLOMA" | "PHD"
+  discipline         String               // "Computer Science", "Management", "Mechanical"
+  durationYears      Float
+  eligibilitySummary String?
+
+  sourceUrl          String
+  retrievedDate      DateTime             @default(now())
+  lastVerifiedDate   DateTime             @default(now())
+  verificationStatus String               @default("VERIFIED")
+  validUntil         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  admissionReqs      ReferenceAdmissionRequirement[]
+
+  @@index([sourceId])
+  @@index([institutionId])
+  @@index([discipline])
+  @@map("reference_courses")
+}
+
+model ReferenceOccupation {
+  id                 String     @id @default(cuid())
+  sourceId           String
+  source             DataSource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  title              String
+  ncsCode            String?    // National Career Service code
+  sector             String
+  description        String
+  coreCompetencies   String?    // JSON array based on NOS
+  educationPath      String?
+
+  sourceUrl          String
+  retrievedDate      DateTime   @default(now())
+  lastVerifiedDate   DateTime   @default(now())
+  verificationStatus String     @default("VERIFIED")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sourceId])
+  @@index([title])
+  @@map("reference_occupations")
+}
+
+model ReferenceSkill {
+  id                 String     @id @default(cuid())
+  sourceId           String
+  source             DataSource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  name               String     @unique
+  category           String?
+  standardCode       String?    // NOS code if available
+
+  sourceUrl          String
+  lastVerifiedDate   DateTime   @default(now())
+  verificationStatus String     @default("VERIFIED")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sourceId])
+  @@map("reference_skills")
+}
+
+model ReferenceJobListing {
+  id                 String     @id @default(cuid())
+  sourceId           String
+  source             DataSource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  jobTitle           String
+  companyName        String
+  location           String
+  employmentType     String     @default("FULL_TIME")
+  officialPostingUrl String
+  salaryDisclosed    Boolean    @default(false)
+  salaryCurrency     String?    @default("INR")
+  salaryMin          Int?
+  salaryMax          Int?
+  postedDate         DateTime?
+  deadlineDate       DateTime?
+
+  sourceUrl          String
+  retrievedDate      DateTime   @default(now())
+  lastVerifiedDate   DateTime   @default(now())
+  verificationStatus String     @default("VERIFIED")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sourceId])
+  @@index([jobTitle])
+  @@map("reference_job_listings")
+}
+
+model ReferenceStudyDestination {
+  id                      String     @id @default(cuid())
+  sourceId                String
+  source                  DataSource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  countryCode             String     @unique // "US", "GB", "CA", "AU", "DE", "IE"
+  countryName             String
+  officialImmigrationUrl  String
+  visaCategoryName        String?    // e.g. "F-1 Student Visa", "Tier 4 / Student Route", "Subclass 500"
+  postStudyWorkSummary    String
+  intakeSeasonsJson       String?    // JSON e.g. ["Fall (August/September)", "Spring (January/February)"]
+
+  sourceUrl               String
+  retrievedDate           DateTime   @default(now())
+  lastVerifiedDate        DateTime   @default(now())
+  verificationStatus      String     @default("VERIFIED")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sourceId])
+  @@map("reference_study_destinations")
+}
+
+model ReferenceAdmissionRequirement {
+  id                 String                @id @default(cuid())
+  sourceId           String
+  source             DataSource            @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  institutionId      String?
+  institution        ReferenceInstitution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+  courseId           String?
+  course             ReferenceCourse?      @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  title              String
+  acceptedEntranceExams String? // JSON e.g. ["KCET", "COMEDK UGET", "JEE Main"]
+  minimumCutoffScore    String?
+  prospectusUrl         String
+  academicYear          String? // e.g. "2025-26"
+
+  sourceUrl          String
+  retrievedDate      DateTime   @default(now())
+  lastVerifiedDate   DateTime   @default(now())
+  verificationStatus String     @default("VERIFIED")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sourceId])
+  @@index([institutionId])
+  @@index([courseId])
+  @@map("reference_admission_requirements")
+}
+
+model ReferenceScholarship {
+  id                 String     @id @default(cuid())
+  sourceId           String
+  source             DataSource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  title              String
+  providerName       String
+  providerType       String     // "GOVERNMENT" | "INSTITUTIONAL" | "CORPORATE" | "TRUST"
+  eligibilitySummary String
+  benefitSummary     String
+  officialPortalUrl  String
+  deadline           DateTime?
+  academicYear       String?
+
+  sourceUrl          String
+  retrievedDate      DateTime   @default(now())
+  lastVerifiedDate   DateTime   @default(now())
+  verificationStatus String     @default("VERIFIED")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sourceId])
+  @@index([title])
+  @@map("reference_scholarships")
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 9. STUDENT ACHIEVEMENTS & CAREER GOALS
+// ══════════════════════════════════════════════════════════════════════════════
+
+model StudentAchievement {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  category    String?   // "ACADEMIC" | "COMPETITION" | "RESEARCH_PUBLICATION" | "LEADERSHIP" | "COMMUNITY" | "SPORTS"
+  issuer      String?
+  dateAwarded DateTime?
+  awardUrl    String?
+
+  dataOrigin  String    @default("STUDENT_INPUT")
+  isVerified  Boolean   @default(false)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("student_achievements")
+}
+
+model CareerGoal {
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  targetRole           String?
+  targetIndustry       String?
+  preferredWorkType    String?  // "FULL_TIME" | "INTERNSHIP" | "HYBRID" | "REMOTE"
+  higherEducationGoal  String?
+  studyAbroadCountries String?  // JSON string array
+  shortTermGoal        String?
+  longTermGoal         String?
+
+  dataOrigin           String   @default("STUDENT_INPUT")
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([userId])
+  @@map("career_goals")
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 10. MULTI-DOMAIN ACADEMIC & PROFESSIONAL REFERENCE TAXONOMY
+// ══════════════════════════════════════════════════════════════════════════════
+
+model ReferenceDomain {
+  id              String                    @id @default(cuid())
+  name            String                    @unique // e.g. "Commerce, Accounting and Finance"
+  code            String                    @unique // e.g. "COMMERCE_FINANCE"
+  description     String?
+  isTechnical     Boolean                   @default(false)
+
+  specializations ReferenceSpecialization[]
+
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  @@map("reference_domains")
+}
+
+model ReferenceSpecialization {
+  id          String          @id @default(cuid())
+  domainId    String
+  domain      ReferenceDomain @relation(fields: [domainId], references: [id], onDelete: Cascade)
+
+  name        String          // e.g. "Taxation & Auditing"
+  code        String?
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([domainId])
+  @@map("reference_specializations")
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// 10. DAY 2 SUITE: GUIDANCE, EVIDENCE VAULT, SPRINT, AND MONETIZATION
+// ══════════════════════════════════════════════════════════════════════════════
+
+model OnboardingState {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  step           Int       @default(0)
+  completedSteps String    @default("[]") // JSON string array of step indices
+  isSkipped      Boolean   @default(false)
+  completedAt    DateTime?
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("onboarding_states")
+}
+
+model GuideSeenPanel {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  panelId   String   // e.g. "career-passport", "evidence-vault", "resume-builder", etc.
+  seenAt    DateTime @default(now())
+  dismissed Boolean  @default(false)
+
+  @@unique([userId, panelId])
+  @@index([userId])
+  @@map("guide_seen_panels")
+}
+
+model EvidenceItem {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type           String          // "CERTIFICATE" | "PROJECT_LINK" | "INTERNSHIP_LETTER" | "MARK_SHEET" | "CLINICAL_LOG" | "LESSON_PLAN" | "MOOT_COURT" | "PORTFOLIO" | "GITHUB_REPO" | "AWARD" | "OTHER"
+  title          String
+  description    String?
+  relatedSkill   String?
+  issuer         String?
+  url            String?
+  date           DateTime?
+  provenance     String          @default("STUDENT_INPUT") // "STUDENT_INPUT" | "DOCUMENT_EXTRACTED"
+  
+  documentId     String?
+  storedDocument StoredDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([relatedSkill])
+  @@map("evidence_items")
+}
+
+model TruthCheckResult {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  targetType       String    // "RESUME" | "LINKEDIN"
+  targetId         String?   // resumeId or linkedInProfileId
+  flaggedItems     String    // JSON string array of items
+  supportedCount   Int       @default(0)
+  unsupportedCount Int       @default(0)
+  resolvedAt       DateTime?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([targetType, targetId])
+  @@map("truth_check_results")
+}
+
+model RoleFitResult {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  profession         String
+  resultsJson        String   // JSON string of matched roles
+  referenceSourceIds String   @default("[]") // JSON string array of verified sources
+  generatedAt        DateTime @default(now())
+
+  @@index([userId])
+  @@map("role_fit_results")
+}
+
+model SprintPlan {
+  id               String       @id @default(cuid())
+  userId           String
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  reportId         String?      // References readiness report if generated from one
+  targetProfession String
+  targetRole       String
+  startDate        DateTime     @default(now())
+  endDate          DateTime
+  status           String       @default("ACTIVE") // "ACTIVE" | "COMPLETED" | "PAUSED"
+
+  tasks            SprintTask[]
+
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([userId])
+  @@map("sprint_plans")
+}
+
+model SprintTask {
+  id            String     @id @default(cuid())
+  planId        String
+  sprintPlan    SprintPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  weekNumber    Int        // 1 to 4
+  dayNumber     Int?       // 1 to 30
+  title         String
+  description   String?
+  linkedGapType String     // "RESUME_SECTION" | "LINKEDIN_SECTION" | "MISSING_SKILL" | "MISSING_EVIDENCE" | "APPLICATION"
+  status        String     @default("PENDING") // "PENDING" | "COMPLETED" | "SNOOZED"
+  dueDate       DateTime?
+  completedAt   DateTime?
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([planId])
+  @@index([status])
+  @@map("sprint_tasks")
+}
+
+model ApplicationPack {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  jobId             String    // Internal or external job listing reference
+  jobTitle          String?
+  companyName       String?
+  resumeVersionId   String?   // References specific Resume version
+  matchSnapshot     String    // JSON: { has: [], missing: [], unsupported: [] }
+  coverNoteDraft    String?   // Short note generated using only passport facts
+  introMessageDraft String?   // Short email or LinkedIn outreach message
+  talkingPointsJson String?   // JSON array of 3 verified proof bank talking points
+  checklist         String    @default("[]") // JSON array of required documents/actions
+  externalUrl       String?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([jobId])
+  @@map("application_packs")
+}
+
+model InterviewPrepKit {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  jobId         String
+  jobTitle      String
+  companyName   String?
+  themesJson    String   // JSON array of question themes + evidence links
+  aiOperationId String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([jobId])
+  @@map("interview_prep_kits")
+}
+
+model ProgressEvent {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  eventType   String   // "RESUME_CREATED" | "EVIDENCE_ADDED" | "LINKEDIN_IMPROVED" | "JOB_SAVED" | "JOB_APPLIED" | "INTERVIEW_SCHEDULED" | "READINESS_REPORT_GENERATED" | "SPRINT_TASK_COMPLETED"
+  title       String
+  description String?
+  refId       String?  // References specific entity id
+  metadata    String?  // JSON additional payload
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("progress_events")
+}
+
+model GuideConversation {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title     String         @default("Career Guide Chat")
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  messages  GuideMessage[]
+
+  @@index([userId])
+  @@map("guide_conversations")
+}
+
+model GuideMessage {
+  id             String            @id @default(cuid())
+  conversationId String
+  conversation   GuideConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  sender         String            // "STUDENT" | "GUIDE" | "SYSTEM"
+  content        String
+  actionLinks    String?           // JSON array of whitelisted route buttons
+  dataCitations  String?           // JSON array of data sources / student passport references
+  isAiGenerated  Boolean           @default(false)
+
+  createdAt      DateTime          @default(now())
+
+  @@index([conversationId])
+  @@map("guide_messages")
+}
+
+model Plan {
+  id          String              @id // "FREE" | "PREMIUM" | "INSTITUTION"
+  name        String              @unique
+  displayName String
+  description String?
+  priceInr    Int                 @default(0) // 0 for free
+  interval    String              @default("monthly") // "monthly" | "short_term_pass" | "annual"
+  isDefault   Boolean             @default(false)
+
+  limits        PlanFeatureLimit[]
+  subscriptions UserSubscription[]
+
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@map("plans")
+}
+
+model PlanFeatureLimit {
+  id           String @id @default(cuid())
+  planId       String
+  plan         Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  featureKey   String // "RESUME_CREATION" | "RESUME_CHECK" | "LINKEDIN_OPTIMIZATION" | "JOB_MATCH" | "READINESS_REPORT" | "GUIDE_MESSAGES" | "EVIDENCE_ITEMS"
+  monthlyQuota Int    // -1 = unlimited
+  maxBurst     Int?
+
+  @@unique([planId, featureKey])
+  @@map("plan_feature_limits")
+}
+
+model UserSubscription {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  planId     String
+  plan       Plan      @relation(fields: [planId], references: [id])
+
+  status     String    @default("ACTIVE") // "ACTIVE" | "EXPIRED" | "CANCELLED"
+  validFrom  DateTime  @default(now())
+  validUntil DateTime? // null = perpetual free, or specific expiry for short-term pass
+  source     String    @default("SELF") // "SELF" | "INSTITUTION" | "MANUAL_DEV_GRANT"
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([planId])
+  @@map("user_subscriptions")
+}
+
+model UsageRecord {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  featureKey    String   // "RESUME_CHECK" | "GUIDE_MESSAGE" | "READINESS_REPORT" etc.
+  operationType String   // "EXTRACTION" | "CLASSIFICATION" | "GENERATION" | "REVIEW"
+  inputTokens   Int      @default(0)
+  outputTokens  Int      @default(0)
+  estimatedCost Float    @default(0) // Calculated estimated cost
+  provider      String   // "GEMINI" | "ANTHROPIC" | "OPENAI" | "DEV_MOCK"
+  model         String   // e.g. "gemini-2.0-flash", "mock-fast"
+  latencyMs     Int      @default(0)
+
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([featureKey])
+  @@index([createdAt])
+  @@map("usage_records")
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  eventName String   // "ONBOARDING_STEP_COMPLETED" | "TOOL_OPENED" | "RESUME_EXPORTED" | "UPGRADE_PROMPT_SHOWN" etc.
+  metadata  String?  // JSON string (no private profile text)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([eventName])
+  @@index([createdAt])
+  @@map("analytics_events")
+}
