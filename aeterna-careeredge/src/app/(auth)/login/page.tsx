@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { Eye, EyeOff, Mail, Phone, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -45,6 +45,16 @@ export default function LoginPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlError = params.get("error");
+      if (urlError) setError(decodeURIComponent(urlError));
+      const urlEmail = params.get("email");
+      if (urlEmail) setIdentifier(decodeURIComponent(urlEmail));
+    }
+  }, []);
 
   // ── Form submit ───────────────────────────────────────────────────────────
 
@@ -90,12 +100,18 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirect based on onboarding status
-      if (data.user?.onboardingCompleted) {
-        router.push("/dashboard");
-      } else {
-        router.push("/onboarding");
-      }
+      // Hard redirect to ensure HTTP-only session cookie is sent on first request
+      // and bypass any stale client-side router cache.
+      const searchParams = new URLSearchParams(window.location.search);
+      const nextUrl = searchParams.get("next");
+      const destination =
+        nextUrl && nextUrl.startsWith("/") && !nextUrl.startsWith("//")
+          ? nextUrl
+          : data.user?.onboardingCompleted
+          ? "/dashboard"
+          : "/onboarding";
+
+      window.location.href = destination;
     } catch {
       setError("Could not connect to the server. Please try again.");
     } finally {
@@ -255,22 +271,14 @@ export default function LoginPage() {
             </motion.div>
 
             {/* Error message */}
-            <AnimatePresence initial={false}>
-              {error && (
-                <motion.div
-                  role="alert"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <p className="rounded-lg bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                    {error}
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {error && (
+              <div
+                role="alert"
+                className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800 animate-in fade-in duration-200"
+              >
+                {error}
+              </div>
+            )}
 
             {/* Submit */}
             <motion.div

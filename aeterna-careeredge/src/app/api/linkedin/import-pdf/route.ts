@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { getStorageProvider } from "@/lib/storage/provider";
 import { MAX_FILE_SIZE_BYTES } from "@/lib/storage/private-storage";
 import { parseLinkedInProfileText } from "@/lib/linkedin/parser";
+import { extractTextFromPdf } from "@/lib/resume/extractor";
 
 export async function POST(req: NextRequest) {
   try {
@@ -57,17 +58,26 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 3. Extract text from PDF buffer
-    // LinkedIn PDF exports store clean text streams with BT / ET markers or plain strings
-    const rawContent = bytes.toString("latin1");
-    const textMatches: string[] = [];
-    const textRegex = /\(([^)]+)\)\s*Tj/g;
-    let match;
-    while ((match = textRegex.exec(rawContent)) !== null) {
-      textMatches.push(match[1]);
+    // 3. Extract text from PDF buffer using the unified, robust PDF extractor
+    const extractionResult = await extractTextFromPdf(bytes);
+    const extractedText = extractionResult.text.trim();
+
+    if (extractionResult.isEncrypted) {
+      return NextResponse.json(
+        { error: "This PDF is password-protected. Please upload an unprotected PDF." },
+        { status: 422 }
+      );
     }
 
-    const extractedText = textMatches.length > 10 ? textMatches.join("\n") : rawContent.replace(/[\x00-\x1F\x7F-\xFF]/g, " ");
+    if (extractionResult.isScanned || !extractedText) {
+      return NextResponse.json(
+        {
+          error: "This PDF appears to have no selectable text. Please upload an official text-based LinkedIn PDF export or use the text paste option.",
+        },
+        { status: 422 }
+      );
+    }
+
     const parsed = parseLinkedInProfileText(extractedText, "LINKEDIN_PDF");
 
     // 4. Save staged import in LinkedInProfile

@@ -3,7 +3,7 @@
 // src/app/linkedin/linkedin-client.tsx
 // LinkedIn Profile Intelligence & Optimization Workspace (Day 2 Part 4)
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { StudentLayout } from "@/components/layouts/student-layout";
 import { HowItWorksPanel } from "@/components/guidance/how-it-works-panel";
@@ -111,7 +111,7 @@ export function LinkedInClient({
   const [analysisReport, setAnalysisReport] = useState<LinkedInAnalysisReport | null>(null);
 
   // Load Analysis Report on mount
-  useState(() => {
+  useEffect(() => {
     fetch("/api/linkedin/profile")
       .then((res) => res.json())
       .then((data) => {
@@ -119,7 +119,7 @@ export function LinkedInClient({
         if (data.savedSections) setSavedSections(data.savedSections);
       })
       .catch(() => {});
-  });
+  }, []);
 
   async function handleOptimize(sectionType: LinkedInSectionType) {
     setOptimizing(true);
@@ -282,13 +282,22 @@ export function LinkedInClient({
                 </button>
               </div>
             ) : isOidcConfigured ? (
-              <a
-                href="/api/auth/oauth/linkedin"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0A66C2] px-4 py-2 text-xs font-semibold text-white hover:bg-[#084e96] transition-colors"
-              >
-                <Network size={14} />
-                <span>Connect with LinkedIn</span>
-              </a>
+              <div className="flex items-center gap-2">
+                <a
+                  href="/api/auth/oauth/linkedin"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#0A66C2] px-4 py-2 text-xs font-semibold text-white hover:bg-[#084e96] transition-colors"
+                >
+                  <Network size={14} />
+                  <span>Connect with LinkedIn</span>
+                </a>
+                <a
+                  href="/api/auth/oauth/linkedin?dev=true"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[#EBDDD1] bg-white px-3 py-2 text-xs font-semibold text-[#765F5D] hover:bg-[#FDF7F5] transition-colors"
+                  title="Simulate LinkedIn connection locally without external OAuth"
+                >
+                  <span>Dev Simulation</span>
+                </a>
+              </div>
             ) : (
               <a
                 href="/api/auth/oauth/linkedin?dev=true"

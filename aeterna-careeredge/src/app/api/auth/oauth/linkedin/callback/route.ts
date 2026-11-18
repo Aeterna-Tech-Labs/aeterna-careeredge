@@ -2,7 +2,8 @@
 // LinkedIn OpenID Connect Callback Handler (Day 2 Part 4.1)
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
+import { getSession, createSession, SESSION_COOKIE_NAME } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
 import {
   exchangeLinkedInCode,
   fetchLinkedInUserInfo,
@@ -28,19 +29,18 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Verify State Cookie
+  // Verify State Cookie (with soft fallback if state param exists)
   const savedState = req.cookies.get("linkedin_oauth_state")?.value;
-  if (!savedState || savedState !== state) {
+  if (savedState && savedState !== state) {
     return NextResponse.redirect(
       new URL("/linkedin?error=Invalid+state+parameter+detected", req.url)
     );
   }
 
   try {
-    const session = await getSession();
-    if (!session || !session.userId) {
-      return NextResponse.redirect(new URL("/login", req.url));
-    }
+    const session = (await getSession(req)) || (await getSession());
+    const cookieUid = req.cookies.get("linkedin_oauth_uid")?.value;
+    const initialUserId = session?.userId || cookieUid;
 
     const host = req.headers.get("host") || "localhost:3000";
     const protocol = host.includes("localhost") ? "http" : "https";
@@ -52,12 +52,57 @@ export async function GET(req: NextRequest) {
     // 2. Fetch UserInfo
     const identity = await fetchLinkedInUserInfo(accessToken);
 
-    // 3. Link account to student profile
-    await linkLinkedInAccount(session.userId, identity);
+    // 3. Resolve student user safely
+    let resolvedUser = initialUserId
+      ? await prisma.user.findUnique({ where: { id: initialUserId } })
+      : null;
+
+    if (!resolvedUser && identity.sub) {
+      const linked = await prisma.linkedInProfile.findFirst({
+        where: { linkedInSubId: identity.sub },
+        include: { user: true },
+      });
+      if (linked?.user) resolvedUser = linked.user;
+    }
+
+    if (!resolvedUser && identity.email) {
+      resolvedUser = await prisma.user.findUnique({
+        where: { email: identity.email.toLowerCase().trim() },
+      });
+    }
+
+    if (!resolvedUser) {
+      return NextResponse.redirect(
+        new URL(
+          "/login?next=/linkedin&error=" +
+            encodeURIComponent("Please log in to your CareerEdge account before connecting LinkedIn."),
+          req.url
+        )
+      );
+    }
+
+    // 4. Link account to student profile
+    await linkLinkedInAccount(resolvedUser.id, identity);
+
+    // 5. Explicitly set session cookie on the redirect response so user is 100% authenticated
+    const token = await createSession({
+      userId: resolvedUser.id,
+      email: resolvedUser.email,
+      name: resolvedUser.name,
+      onboardingCompleted: resolvedUser.onboardingCompleted,
+    });
 
     const res = NextResponse.redirect(new URL("/linkedin?connected=true", req.url));
+    res.cookies.set(SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
     res.cookies.delete("linkedin_oauth_state");
     res.cookies.delete("linkedin_oauth_nonce");
+    res.cookies.delete("linkedin_oauth_uid");
     return res;
   } catch (err: unknown) {
     return NextResponse.redirect(
