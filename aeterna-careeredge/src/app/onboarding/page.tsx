@@ -376,20 +376,21 @@ export default function OnboardingPage() {
             aria-hidden="true"
             className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#F6B51C] to-transparent"
           />
-          <div className="mx-auto flex h-20 max-w-3xl items-center justify-between gap-4 px-5 sm:px-8">
+          <div className="mx-auto flex h-20 max-w-3xl items-center justify-between gap-1.5 sm:gap-4 px-2 sm:px-8 min-w-0 w-full">
             <BrandLogo
               tone="dark"
               href={isOnboarded || fromDashboard ? "/dashboard" : "/"}
             />
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 sm:gap-3 shrink-0">
               {(isOnboarded || fromDashboard) && (
                 <button
                   type="button"
                   onClick={() => router.push("/dashboard")}
-                  className="rounded-lg px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                  className="rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
                 >
-                  Back to Dashboard
+                  <span className="hidden sm:inline">Back to Dashboard</span>
+                  <span className="sm:hidden">Back</span>
                 </button>
               )}
 
@@ -397,16 +398,16 @@ export default function OnboardingPage() {
                 type="button"
                 onClick={saveAndExit}
                 disabled={savingAndExiting || submitting}
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10 hover:text-[#F6B51C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F6B51C] disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-white/90 transition-colors hover:bg-white/10 hover:text-[#F6B51C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F6B51C] disabled:opacity-50"
               >
-                <Save size={15} aria-hidden="true" />
-                {savingAndExiting ? "Saving…" : "Save & Exit"}
+                <Save size={13} aria-hidden="true" />
+                <span>{savingAndExiting ? "Saving…" : "Save & Exit"}</span>
               </button>
             </div>
           </div>
         </header>
 
-        <main className="mx-auto max-w-3xl px-5 pb-16 pt-10 sm:px-8">
+        <main className="mx-auto max-w-3xl px-3 sm:px-8 pb-16 pt-6 sm:pt-10 min-w-0 w-full">
           {/* Edit Mode Notice Banner */}
           {(isOnboarded || fromDashboard) && (
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-[#FFF9ED] to-[#FFF3DC] border border-[#F2B63D]/60 p-4 shadow-xs">

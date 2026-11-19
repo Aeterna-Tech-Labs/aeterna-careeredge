@@ -4,13 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
-import { Libre_Baskerville } from "next/font/google";
-
-const brandFont = Libre_Baskerville({
-  subsets: ["latin"],
-  weight: "700",
-});
+import { BrandLogo } from "@/components/common/BrandLogo";
 
 const links = [
   { label: "Home", href: "/" },
@@ -91,32 +85,9 @@ export function MarketingNavbar() {
       />
 
       <div className="page-container flex h-20 items-center justify-between gap-5">
-        <Link
-          href="/"
-          aria-label="CareerEdge home"
-          className="group inline-flex shrink-0 items-center gap-2"
-        >
-          <Image
-            src="/assets/logos/company-logo.webp"
-            alt=""
-            width="60"
-            height="60"
-            priority
-            className="h-10 w-10 shrink-0 object-contain"
-          />
-          <div className="flex min-w-0 flex-col justify-center">
-            <span
-              className={`${brandFont.className} bg-gradient-to-b from-[#FFD83D] via-[#F6B51C] to-[#E58F0C] bg-clip-text text-xl font-bold uppercase leading-none tracking-tight text-transparent`}
-            >
-              Aeterna
-            </span>
-            <span className="mt-1.5 text-[10px] font-medium leading-none tracking-[0.3em] text-white/90">
-              CareerEdge
-            </span>
-          </div>
-        </Link>
+        <BrandLogo tone="dark" href="/" />
 
-        <nav className="hidden flex-1 items-center justify-center gap-7 md:flex">
+        <nav className="hidden flex-1 items-center justify-center gap-4 lg:gap-7 md:flex">
           {links.map((link) => (
             <Link
               key={link.label}
@@ -129,7 +100,7 @@ export function MarketingNavbar() {
           ))}
         </nav>
 
-        <div className="hidden shrink-0 items-center gap-6 md:flex">
+        <div className="hidden shrink-0 items-center gap-3 lg:gap-6 md:flex">
           {currentUser ? (
             <Link
               href={

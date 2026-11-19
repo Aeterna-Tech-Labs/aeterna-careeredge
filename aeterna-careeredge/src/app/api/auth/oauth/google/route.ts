@@ -7,6 +7,7 @@ import {
   generateOAuthState,
   getGoogleAuthUrl,
 } from "@/lib/auth/oauth";
+import { isSecureCookie } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
   // Set CSRF state cookie with httpOnly, 10 minutes expiry
   response.cookies.set("ace_oauth_state", state, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureCookie(),
     sameSite: "lax",
     path: "/",
     maxAge: 600, // 10 minutes

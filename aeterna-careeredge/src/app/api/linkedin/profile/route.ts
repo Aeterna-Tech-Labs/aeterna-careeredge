@@ -53,15 +53,43 @@ export async function GET() {
       }
     }
 
+    // Combine skills and experiences from DB and staged import for comprehensive readiness assessment
+    const dbSkills = user.skills.map((s) => s.name);
+    const importSkills: string[] = parsedImport?.skills || [];
+    const skillSet = new Set<string>();
+    const allSkills: string[] = [];
+    for (const s of [...dbSkills, ...importSkills]) {
+      const norm = s.trim().toLowerCase();
+      if (norm && !skillSet.has(norm)) {
+        skillSet.add(norm);
+        allSkills.push(s.trim());
+      }
+    }
+
+    const effectiveExpCount = Math.max(
+      user.experiences.length,
+      parsedImport?.experiences?.length || 0
+    );
+
+    const effectiveCertCount = Math.max(
+      user.certifications.length,
+      parsedImport?.certifications?.length || 0
+    );
+
+    const effectiveRole =
+      user.profile?.preferredJobRole ||
+      (parsedImport?.headline ? parsedImport.headline.split(/[|\-–]/)[0].trim() : "") ||
+      "Professional";
+
     const analysisReport = await analyzeLinkedInProfile({
       userId: session.userId,
       domain: academicDomain,
-      targetRole,
+      targetRole: effectiveRole,
       headline: profile?.headlineSuggestion || parsedImport?.headline || "",
       about: profile?.summarySuggestion || parsedImport?.about || "",
-      skills: user.skills.map((s) => s.name),
-      experiencesCount: user.experiences.length,
-      certificationsCount: user.certifications.length,
+      skills: allSkills,
+      experiencesCount: effectiveExpCount,
+      certificationsCount: effectiveCertCount,
     });
 
     // Save optimization score in database

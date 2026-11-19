@@ -1164,7 +1164,7 @@ export function UploadResumeModal({
                     />
                     <div className="text-xs">
                       <p className="font-bold text-stone-900">
-                        Run full ATS & Truth Check analysis
+                        Run full ATS & Evidence readiness analysis
                       </p>
                       <p className="text-[11px] text-stone-600">
                         Benchmarks your resume against recruiters and scans for unbacked claims.

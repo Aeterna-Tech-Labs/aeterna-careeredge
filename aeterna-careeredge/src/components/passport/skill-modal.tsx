@@ -99,19 +99,19 @@ export function SkillModal({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-stone-200"
+        className="relative w-full max-w-md max-h-[90dvh] overflow-y-auto ce-scrollbar my-auto rounded-2xl bg-white p-6 shadow-2xl border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-stone-100 pb-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF9ED] text-[#7A0F1F]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
               <Code size={18} />
             </div>
             <div>
-              <h2 id="skill-modal-title" className="text-lg font-bold text-gray-900">
+              <h2 id="skill-modal-title" className="text-lg font-bold text-slate-900">
                 Add Skill to Passport
               </h2>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-slate-500">
                 Benchmark verified competency against industry standards.
               </p>
             </div>
@@ -120,7 +120,7 @@ export function SkillModal({
             type="button"
             onClick={onClose}
             aria-label="Close modal"
-            className="rounded-lg p-1 text-gray-400 hover:bg-stone-100 hover:text-gray-700 transition"
+            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
           >
             <X size={18} />
           </button>
@@ -135,7 +135,7 @@ export function SkillModal({
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-700">
+            <label className="block text-xs font-semibold text-slate-700">
               Skill / Tool Name *
             </label>
             <input
@@ -144,19 +144,19 @@ export function SkillModal({
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Python, Financial Modeling, React.js"
               required
-              className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2 text-xs focus:border-[#7A0F1F] focus:outline-none focus:ring-1 focus:ring-[#7A0F1F]"
+              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-xs focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600/20"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-700">
+              <label className="block text-xs font-semibold text-slate-700">
                 Category
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2 text-xs bg-white focus:border-[#7A0F1F] focus:outline-none focus:ring-1 focus:ring-[#7A0F1F]"
+                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-xs bg-white focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600/20"
               >
                 {SKILL_CATEGORIES.map((cat) => (
                   <option key={cat.value} value={cat.value}>
@@ -167,13 +167,13 @@ export function SkillModal({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-700">
+              <label className="block text-xs font-semibold text-slate-700">
                 Proficiency Level
               </label>
               <select
                 value={level}
                 onChange={(e) => setLevel(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-2 text-xs bg-white focus:border-[#7A0F1F] focus:outline-none focus:ring-1 focus:ring-[#7A0F1F]"
+                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-xs bg-white focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600/20"
               >
                 {PROFICIENCY_LEVELS.map((pl) => (
                   <option key={pl.value} value={pl.value}>
@@ -184,19 +184,19 @@ export function SkillModal({
             </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-end gap-3 border-t border-stone-100 pt-4">
+          <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
             <button
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="rounded-xl border border-stone-300 px-4 py-2 text-xs font-medium text-gray-700 hover:bg-stone-50 transition"
+              className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#7A0F1F] px-5 py-2 text-xs font-bold text-white hover:bg-[#4C0915] disabled:opacity-50 shadow-xs transition"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50 shadow-xs transition"
             >
               <Plus size={14} />
               <span>{saving ? "Adding…" : "Add Skill"}</span>

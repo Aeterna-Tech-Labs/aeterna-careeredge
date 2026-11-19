@@ -37,53 +37,53 @@ export function StatCard({
 
   const content = (
     <div
-      className={`relative flex flex-col justify-between rounded-2xl border p-4 sm:p-5 transition-all ${
+      className={`relative flex flex-col justify-between rounded-2xl border p-5 transition-all duration-200 ${
         highlight
-          ? "border-[#F2B63D] bg-gradient-to-br from-[#FFF9ED] to-white shadow-xs"
-          : "border-[#EBDDD1] bg-white hover:border-[#7A0F1F]/40 shadow-2xs"
+          ? "border-amber-400 bg-gradient-to-br from-amber-50/50 to-white shadow-card hover:shadow-hover"
+          : "border-border bg-surface hover:border-primary/40 shadow-card hover:shadow-hover"
       } ${className}`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold text-[#765F5D] truncate">{label}</span>
+        <span className="text-xs font-bold text-secondary-text tracking-wide truncate">{label}</span>
         <div
-          className={`flex h-8 w-8 items-center justify-center rounded-xl shrink-0 ${
-            highlight ? "bg-[#7A0F1F] text-[#F2B63D]" : "bg-[#FFF9ED] text-[#7A0F1F] border border-[#EBDDD1]"
+          className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 ${
+            highlight ? "bg-blue-600 text-white shadow-xs" : "bg-blue-50 text-blue-600 border border-blue-200"
           }`}
         >
-          <Icon size={16} aria-hidden="true" />
+          <Icon size={18} aria-hidden="true" />
         </div>
       </div>
 
-      <div className="mt-3 flex items-baseline justify-between gap-2">
-        <span className="font-heading text-2xl sm:text-3xl font-bold tracking-tight text-[#2B1B1B]">
+      <div className="mt-4 flex items-baseline justify-between gap-2">
+        <span className="font-heading text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
           {value}
         </span>
         {badge}
       </div>
 
       {subtext && (
-        <p className="mt-1 text-[11px] text-[#765F5D] leading-tight truncate">
+        <p className="mt-1 text-xs text-muted-text leading-tight truncate">
           {subtext}
         </p>
       )}
 
       {isZeroOrEmpty && emptyStateAction && (
-        <div className="mt-3 pt-2.5 border-t border-[#EBDDD1]/60">
+        <div className="mt-3 pt-2.5 border-t border-border">
           <Link
             href={emptyStateAction.href}
-            className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7A0F1F] hover:text-[#4C0915] transition"
+            className="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:text-primary-dark transition"
           >
             <span>{emptyStateAction.label}</span>
-            <ArrowUpRight size={11} />
+            <ArrowUpRight size={12} />
           </Link>
         </div>
       )}
     </div>
   );
 
-  if (href && !isZeroOrEmpty) {
+  if (href) {
     return (
-      <Link href={href} className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A0F1F] rounded-2xl">
+      <Link href={href} className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl">
         {content}
       </Link>
     );

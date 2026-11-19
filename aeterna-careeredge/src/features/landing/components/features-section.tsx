@@ -73,7 +73,7 @@ export function FeaturesSection() {
     <MotionConfig reducedMotion="user">
       <section
         id="features"
-        className="relative isolate scroll-mt-24 overflow-hidden bg-white py-20 sm:py-24"
+        className="relative isolate scroll-mt-24 overflow-hidden bg-white py-14 sm:py-20 lg:py-24"
       >
         {/* Soft background glow */}
         <div
@@ -93,11 +93,11 @@ export function FeaturesSection() {
               Everything in one place
             </p>
 
-            <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight text-foreground min-[375px]:text-3xl sm:text-4xl">
               Tools to help you move forward.
             </h2>
 
-            <p className="mt-4 text-base leading-7 text-secondary-text">
+            <p className="mt-4 text-sm leading-7 text-secondary-text sm:text-base">
               From your first resume to your next opportunity, get the tools you
               need to prepare for your future.
             </p>
@@ -108,7 +108,7 @@ export function FeaturesSection() {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, amount: 0.15 }}
-            className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3"
+            className="mt-8 grid gap-4 sm:mt-12 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3"
           >
             {features.map((feature, index) => {
               const Icon = feature.icon;
@@ -119,7 +119,7 @@ export function FeaturesSection() {
                     variants={fadeUp}
                     whileHover={{ y: -6 }}
                     transition={spring}
-                    className="group relative overflow-hidden rounded-3xl border border-border bg-background p-6 transition-[box-shadow,border-color,background-color] duration-300 hover:border-gold hover:bg-white hover:shadow-xl"
+                    className="group relative overflow-hidden rounded-3xl border border-border bg-background p-5 transition-[box-shadow,border-color,background-color] duration-300 hover:border-gold hover:bg-white hover:shadow-xl sm:p-6"
                   >
                     {/* Accent line that grows in on hover */}
                     <div
@@ -128,7 +128,7 @@ export function FeaturesSection() {
                     />
 
                     <div className="flex items-center justify-between">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-gold/40 bg-gold-soft text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-white">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-gold/40 bg-gold-soft text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-white sm:h-12 sm:w-12">
                         <Icon size={23} aria-hidden="true" />
                       </div>
 
@@ -137,15 +137,15 @@ export function FeaturesSection() {
                       </span>
                     </div>
 
-                    <h3 className="mt-6 font-heading text-lg font-bold text-foreground">
+                    <h3 className="mt-5 font-heading text-base font-bold text-foreground sm:mt-6 sm:text-lg">
                       {feature.title}
                     </h3>
 
-                    <p className="mt-2 min-h-[48px] text-sm leading-6 text-secondary-text">
+                    <p className="mt-2 text-sm leading-6 text-secondary-text sm:min-h-[48px]">
                       {feature.description}
                     </p>
 
-                    <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-primary">
+                    <div className="mt-4 flex items-center gap-2 text-sm font-semibold text-primary sm:mt-5">
                       {feature.benefit}
                       <ArrowUpRight
                         size={16}

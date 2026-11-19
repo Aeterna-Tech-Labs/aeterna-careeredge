@@ -2,7 +2,7 @@
 // LinkedIn OpenID Connect Initiation & Disconnection API (Day 2 Part 4.1)
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
+import { getSession, isSecureCookie } from "@/lib/session";
 import {
   isLinkedInConfigured,
   generateLinkedInAuthUrl,
@@ -12,18 +12,16 @@ import {
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
+    const session = (await getSession(req)) || (await getSession());
     if (!session || !session.userId) {
-      return NextResponse.redirect(new URL("/login", req.url));
+      return NextResponse.redirect(new URL("/login?next=/linkedin", req.url));
     }
 
     const url = new URL(req.url);
-    const isDev =
-      url.searchParams.get("dev") === "true" ||
-      process.env.NODE_ENV !== "production";
+    const forceDevSim = url.searchParams.get("dev") === "true";
 
-    if (!isLinkedInConfigured()) {
-      if (isDev) {
+    if (forceDevSim || !isLinkedInConfigured()) {
+      if (forceDevSim || process.env.NODE_ENV !== "production") {
         // Safe development simulation for offline testing
         await linkLinkedInAccount(session.userId, {
           sub: `li_sim_${session.userId.slice(-6)}`,
@@ -50,16 +48,25 @@ export async function GET(req: NextRequest) {
     const { url: authUrl, state, nonce } = generateLinkedInAuthUrl(redirectUri);
 
     const response = NextResponse.redirect(authUrl);
-    // Set CSRF verification cookies
+    // Set CSRF verification cookies with explicit sameSite: "lax" so cross-site redirects preserve them
     response.cookies.set("linkedin_oauth_state", state, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecureCookie(),
+      sameSite: "lax",
       maxAge: 600, // 10 minutes
       path: "/",
     });
     response.cookies.set("linkedin_oauth_nonce", nonce, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecureCookie(),
+      sameSite: "lax",
+      maxAge: 600,
+      path: "/",
+    });
+    response.cookies.set("linkedin_oauth_uid", session.userId, {
+      httpOnly: true,
+      secure: isSecureCookie(),
+      sameSite: "lax",
       maxAge: 600,
       path: "/",
     });

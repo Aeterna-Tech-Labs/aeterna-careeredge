@@ -24,6 +24,7 @@ import { AiReviewPanel } from "./components/ai-review-panel";
 import { VersionHistoryModal } from "./components/version-history-modal";
 import { BeforeAfterModal } from "./components/before-after-modal";
 import { UploadResumeButton } from "@/components/resume/upload-resume-button";
+import { UploadResumeModal } from "@/components/resume/upload-resume-modal";
 import type { TruthCheckReport } from "@/lib/truth-check/service";
 import {
   Save,
@@ -51,6 +52,12 @@ import {
   PanelRightOpen,
   X,
   RotateCcw,
+  Bookmark,
+  ChevronDown,
+  Check,
+  HelpCircle,
+  MoreHorizontal,
+  UploadCloud,
 } from "lucide-react";
 
 interface BuilderClientProps {
@@ -77,9 +84,24 @@ interface BuilderClientProps {
     relatedSkill?: string | null;
     url?: string | null;
   }>;
+  savedResumes?: Array<{
+    id: string;
+    title: string;
+    targetRole?: string | null;
+    templateId: string;
+    atsScore?: number | null;
+    styleData?: string | null;
+    updatedAt: Date | string;
+    createdAt?: Date | string;
+  }>;
 }
 
-export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProps) {
+export function BuilderClient({
+  user,
+  resume,
+  evidenceItems,
+  savedResumes = [],
+}: BuilderClientProps) {
   // Normalize initial data safely
   const initialNormalized = useMemo(() => {
     return normalizeResumeData(
@@ -111,9 +133,13 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(false);
   const [showAiDrawer, setShowAiDrawer] = useState(false);
+  const [showResumeSwitcher, setShowResumeSwitcher] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
-  // Preview Zoom (50% to 150%)
-  const [zoom, setZoom] = useState<number>(100);
+  // Preview Zoom (50% to 150%) - Defaults to 75% for instant full-document visibility without scrolling
+  const [zoom, setZoom] = useState<number>(75);
 
   // Save state
   const [saving, setSaving] = useState(false);
@@ -122,6 +148,8 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
   // Full-Resume AI Analysis state
   const [fullAnalysisReport, setFullAnalysisReport] = useState<FullResumeAnalysisReport | null>(null);
   const [analyzingFull, setAnalyzingFull] = useState(false);
+  const [analyzingSectionId, setAnalyzingSectionId] = useState<string | null>(null);
+  const [drawerSectionId, setDrawerSectionId] = useState<string | null>(null);
   const [jobDescription, setJobDescription] = useState("");
 
   // Modals state
@@ -224,6 +252,7 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
 
   // ── Full-Resume AI Analysis Action ─────────────────────────────────────────
   async function handleAnalyzeFull() {
+    setDrawerSectionId(null);
     setAnalyzingFull(true);
     try {
       const res = await fetch(`/api/resumes/${resume.id}/analyze-full`, {
@@ -253,6 +282,8 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
 
   // ── Single Section Improvement Action ──────────────────────────────────────
   async function handleImproveSection(sectionId: string) {
+    setAnalyzingSectionId(sectionId);
+    setActiveSectionId(sectionId);
     try {
       const res = await fetch(`/api/resumes/${resume.id}/improve-section`, {
         method: "POST",
@@ -266,17 +297,45 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
       const resData = await res.json();
       if (!res.ok) throw new Error(resData.error || "Failed to optimize section.");
 
-      if (resData.sectionResult && fullAnalysisReport) {
-        const updatedAnalyses = fullAnalysisReport.sectionAnalyses.map((s) =>
-          s.sectionId === sectionId ? resData.sectionResult : s
-        );
-        setFullAnalysisReport({
-          ...fullAnalysisReport,
-          sectionAnalyses: updatedAnalyses,
-        });
+      if (resData.sectionResult) {
+        if (fullAnalysisReport) {
+          const exists = fullAnalysisReport.sectionAnalyses.some((s) => s.sectionId === sectionId);
+          const updatedAnalyses = exists
+            ? fullAnalysisReport.sectionAnalyses.map((s) =>
+                s.sectionId === sectionId ? resData.sectionResult : s
+              )
+            : [...fullAnalysisReport.sectionAnalyses, resData.sectionResult];
+          setFullAnalysisReport({
+            ...fullAnalysisReport,
+            sectionAnalyses: updatedAnalyses,
+          });
+        } else {
+          setFullAnalysisReport({
+            overallScore: resData.sectionResult.score || 75,
+            scoreExplanation: resData.sectionResult.scoreExplanation || `Section analysis complete for ${resData.sectionResult.sectionTitle}.`,
+            topPriorityFixes: [],
+            sectionAnalyses: [resData.sectionResult],
+            crossSectionIssues: [],
+            atsReadabilityFindings: {
+              readabilityScore: 85,
+              formatCheck: "PASS",
+              bulletLengthEvaluation: "Optimal",
+              standardHeadingsDetected: [resData.sectionResult.sectionTitle],
+              unconventionalHeadings: [],
+              warnings: [],
+            },
+            contentHash: "",
+            analyzedAt: new Date().toISOString(),
+            isOutOfDate: false,
+          });
+        }
+        setSaveStatus(`✓ Analyzed ${resData.sectionResult.sectionTitle}: ${resData.sectionResult.suggestions.length} suggestions ready.`);
+        setTimeout(() => setSaveStatus(null), 4000);
       }
     } catch (err: unknown) {
       alert((err as Error).message || "Could not improve section.");
+    } finally {
+      setAnalyzingSectionId(null);
     }
   }
 
@@ -571,51 +630,121 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
       userName={user.name}
       studentDomain={user.academicDomain}
       targetRole={data.targetRole || user.preferredJobRole}
+      fullBleed={true}
     >
-      <div className="min-h-screen bg-[#FDFBF9] pb-16">
-        {/* ── 1. Flow-Style Top Navigation & Master Toolbar ─────────────── */}
-        <div className="sticky top-0 z-30 border-b border-[#EBDDD1] bg-white px-3 sm:px-6 py-2.5 shadow-xs print:hidden">
-          <div className="mx-auto flex max-w-[1700px] flex-wrap items-center justify-between gap-3">
-            {/* Left: Back Link & Document Title */}
-            <div className="flex items-center gap-3">
+      <div className="flex flex-col h-full w-full bg-[#F8FAFC] overflow-hidden">
+        {/* ── 1. Flow-Style Top Navigation & Master Toolbar (Single Non-Stacking Row) ─── */}
+        <div className="h-14 shrink-0 border-b border-slate-200 bg-white px-3 sm:px-4 flex items-center justify-between z-20 shadow-2xs print:hidden">
+          <div className="w-full flex items-center justify-between gap-2.5 flex-nowrap">
+            {/* Left: Back Link & Document Title & Saved Formats Switcher */}
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 min-w-0">
               <Link
                 href="/resume"
-                className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#EBDDD1] text-[#765F5D] hover:bg-[#FDF7F5] transition"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition shadow-2xs"
                 title="Back to Resumes"
               >
                 <ArrowLeft size={16} />
               </Link>
 
-              <div>
+              <div className="min-w-0 max-w-[90px] xs:max-w-[130px] sm:max-w-[180px] md:max-w-[220px]">
                 <input
                   type="text"
                   value={resumeTitle}
                   onChange={(e) => setResumeTitle(e.target.value)}
-                  className="font-heading text-sm font-bold text-[#2B1810] focus:border-b focus:border-[#7A0F1F] focus:outline-hidden"
+                  className="font-heading text-xs sm:text-sm font-bold text-slate-900 focus:border-b focus:border-blue-600 focus:outline-hidden w-full truncate bg-transparent"
+                  title="Click to rename resume"
                 />
-                <div className="flex items-center gap-2 text-[10px] text-[#765F5D]">
-                  <span className="font-semibold text-[#7A0F1F]">{data.domainName}</span>
-                  <span>&bull;</span>
-                  <span>Target: {data.targetRole || "Professional"}</span>
-                </div>
+              </div>
+
+              {/* Saved Formats & Studio Switcher Dropdown */}
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowResumeSwitcher(!showResumeSwitcher)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 text-xs font-semibold text-slate-700 transition shadow-2xs"
+                  title="View and switch between saved resumes & studio formats"
+                >
+                  <Bookmark size={13} className="text-blue-600" />
+                  <span className="hidden md:inline">Saved Formats</span>
+                  <span className="rounded-full bg-blue-100 text-blue-700 px-1.5 text-[10px] font-bold">
+                    {savedResumes.length}
+                  </span>
+                  <ChevronDown
+                    size={12}
+                    className={`text-slate-400 transition-transform ${
+                      showResumeSwitcher ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {showResumeSwitcher && (
+                  <div className="absolute left-0 top-full mt-1.5 w-80 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-xl z-50 animate-in fade-in zoom-in-95">
+                    <div className="flex items-center justify-between px-2 py-1.5 border-b border-slate-100">
+                      <div>
+                        <span className="text-xs font-bold text-slate-800 block">
+                          Saved Resumes &amp; Studio Formats
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          {savedResumes.length} saved version{savedResumes.length === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                      <Link
+                        href="/resume/studio"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700"
+                      >
+                        <Sparkles size={11} className="text-amber-500" />
+                        <span>Studio</span>
+                      </Link>
+                    </div>
+
+                    <div className="max-h-64 overflow-y-auto ce-scrollbar space-y-1 p-1 mt-1">
+                      {savedResumes.map((r) => {
+                        const isCurrent = r.id === resume.id;
+                        return (
+                          <a
+                            key={r.id}
+                            href={`/resume/builder?id=${r.id}`}
+                            className={`flex items-center justify-between p-2 rounded-xl text-xs transition ${
+                              isCurrent
+                                ? "bg-blue-50/80 text-blue-900 font-semibold border border-blue-200"
+                                : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                            }`}
+                          >
+                            <div className="min-w-0 pr-2">
+                              <span className="truncate block font-medium">{r.title}</span>
+                              <span className="text-[10px] text-slate-400 block truncate">
+                                {r.targetRole || "Professional"} &bull; {r.templateId}
+                              </span>
+                            </div>
+                            {r.atsScore ? (
+                              <span className="shrink-0 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 text-[9px] font-bold">
+                                {r.atsScore}% ATS
+                              </span>
+                            ) : null}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Center: Zone Toggle Controls (Desktop Flow Layout) & Health */}
-            <div className="hidden lg:flex items-center gap-2">
-              <div className="flex items-center rounded-xl border border-[#EBDDD1] bg-[#FCF9F6] p-0.5">
+            {/* Center: Desktop Panel Visibility Segmented Control */}
+            <div className="hidden lg:flex items-center gap-2 shrink-0">
+              <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-0.5 shadow-2xs">
                 <button
                   type="button"
                   onClick={() => setIsLeftCollapsed(!isLeftCollapsed)}
                   className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
                     !isLeftCollapsed
-                      ? "bg-white text-[#7A0F1F] shadow-xs"
-                      : "text-stone-500 hover:text-stone-800"
+                      ? "bg-white text-blue-600 shadow-xs"
+                      : "text-slate-500 hover:text-slate-800"
                   }`}
-                  title="Toggle Sections Panel"
+                  title="Toggle Left Content Panel"
                 >
                   {isLeftCollapsed ? <PanelLeftOpen size={13} /> : <PanelLeftClose size={13} />}
-                  <span>Sections</span>
+                  <span>Content</span>
                 </button>
 
                 <button
@@ -623,59 +752,27 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
                   onClick={() => setIsRightCollapsed(!isRightCollapsed)}
                   className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
                     !isRightCollapsed
-                      ? "bg-white text-[#7A0F1F] shadow-xs"
-                      : "text-stone-500 hover:text-stone-800"
+                      ? "bg-white text-blue-600 shadow-xs"
+                      : "text-slate-500 hover:text-slate-800"
                   }`}
-                  title="Toggle Design Panel"
+                  title="Toggle Right Design Panel"
                 >
                   <Palette size={13} />
                   <span>Design</span>
                   {isRightCollapsed ? <PanelRightOpen size={13} /> : <PanelRightClose size={13} />}
                 </button>
               </div>
-
-              <div
-                className="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold"
-                style={{
-                  backgroundColor: localReport.overallHealthScore >= 80 ? "#F0FDF4" : "#FFFBEB",
-                  borderColor: localReport.overallHealthScore >= 80 ? "#86EFAC" : "#FCD34D",
-                  color: localReport.overallHealthScore >= 80 ? "#166534" : "#92400E",
-                }}
-                title={`${localReport.totalFindings} local check findings`}
-              >
-                <ShieldCheck size={13} />
-                <span>Health: {localReport.overallHealthScore}%</span>
-              </div>
-
-              {isAnalysisOutOfDate && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 text-[10px] font-bold">
-                  <AlertTriangle size={11} />
-                  <span>Out of Date</span>
-                </span>
-              )}
             </div>
 
             {/* Right: Master Actions Toolbar */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Universal "Import from File" Button */}
-              <UploadResumeButton
-                variant="compact"
-                label="Import File"
-                defaultTargetRole={data.targetRole || ""}
-                onSuccess={(result) => {
-                  if (result?.resumeId) {
-                    window.location.href = `/resume/builder?id=${result.resumeId}`;
-                  }
-                }}
-              />
-
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               {/* Undo / Redo */}
-              <div className="flex items-center border border-[#EBDDD1] rounded-xl overflow-hidden bg-white shadow-2xs">
+              <div className="hidden sm:flex items-center border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
                 <button
                   type="button"
                   disabled={undoStack.length === 0}
                   onClick={handleUndo}
-                  className="p-1.5 text-stone-600 hover:bg-[#FDF7F5] disabled:opacity-30"
+                  className="p-1.5 text-slate-600 hover:bg-slate-50 disabled:opacity-30 transition"
                   title="Undo (Ctrl+Z)"
                 >
                   <Undo2 size={13} />
@@ -684,84 +781,28 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
                   type="button"
                   disabled={redoStack.length === 0}
                   onClick={handleRedo}
-                  className="p-1.5 text-stone-600 hover:bg-[#FDF7F5] disabled:opacity-30 border-l border-[#EBDDD1]"
+                  className="p-1.5 text-slate-600 hover:bg-slate-50 disabled:opacity-30 border-l border-slate-200 transition"
                   title="Redo"
                 >
                   <Redo2 size={13} />
                 </button>
               </div>
 
-              {/* Version History */}
-              <button
-                type="button"
-                onClick={() => setShowVersionModal(true)}
-                className="inline-flex items-center gap-1 rounded-xl border border-[#EBDDD1] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#765F5D] hover:bg-[#FDF7F5] transition"
-                title="Version History"
-              >
-                <History size={13} />
-                <span className="hidden sm:inline">Versions</span>
-              </button>
-
-              {/* Duplicate */}
-              <button
-                type="button"
-                onClick={handleDuplicate}
-                className="inline-flex items-center gap-1 rounded-xl border border-[#EBDDD1] bg-white px-2 py-1.5 text-xs font-semibold text-[#765F5D] hover:bg-[#FDF7F5] transition"
-                title="Duplicate Resume Version"
-              >
-                <Copy size={13} />
-              </button>
-
-              {/* Truth Check */}
-              <button
-                type="button"
-                onClick={handleTruthCheck}
-                className="inline-flex items-center gap-1 rounded-xl border border-emerald-300 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-900 hover:bg-emerald-100 transition"
-              >
-                <CheckCheck size={13} />
-                <span className="hidden sm:inline">Truth Check</span>
-              </button>
-
-              {/* Full AI Analysis Trigger */}
+              {/* Full Analyze */}
               <button
                 type="button"
                 disabled={analyzingFull}
                 onClick={handleAnalyzeFull}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[#F6B51C] bg-[#FFF9ED] px-3 py-1.5 text-xs font-bold text-[#7A0F1F] hover:bg-[#FFF0D4] transition shadow-2xs disabled:opacity-50"
+                aria-label="Full Analyze"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50/90 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition shadow-2xs disabled:opacity-50 shrink-0"
+                title="Run full AI intelligence audit across entire resume"
               >
                 {analyzingFull ? (
-                  <Loader2 size={13} className="animate-spin text-[#7A0F1F]" />
+                  <Loader2 size={13} className="animate-spin text-blue-600" />
                 ) : (
-                  <Sparkles size={13} className="text-[#F6B51C]" />
+                  <Sparkles size={13} className="text-blue-600" />
                 )}
-                <span>{analyzingFull ? "Analyzing…" : "Analyze Full"}</span>
-              </button>
-
-              {/* Export PDF */}
-              <button
-                type="button"
-                disabled={exportingPdf}
-                onClick={handleExportPdf}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[#7A0F1F] bg-[#FFF9ED] px-3 py-1.5 text-xs font-bold text-[#7A0F1F] hover:bg-[#FFF0D4] transition shadow-2xs disabled:opacity-50"
-                title="Download ATS-Friendly Vector PDF"
-              >
-                {exportingPdf ? (
-                  <Loader2 size={13} className="animate-spin text-[#7A0F1F]" />
-                ) : (
-                  <Download size={13} />
-                )}
-                <span>{exportingPdf ? "Exporting…" : "Export PDF"}</span>
-              </button>
-
-              {/* Print View */}
-              <button
-                type="button"
-                onClick={handleOpenPrintView}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[#EBDDD1] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#2B1810] hover:bg-[#FDF7F5] transition"
-                title="Open Dedicated Clean Print View"
-              >
-                <Printer size={13} />
-                <span className="hidden sm:inline">Print</span>
+                <span className="hidden sm:inline">{analyzingFull ? "Analyzing…" : "Full Analyze"}</span>
               </button>
 
               {/* Save */}
@@ -769,14 +810,123 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
                 type="button"
                 disabled={saving}
                 onClick={() => handleSave("Manual student save")}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#7A0F1F] px-4 py-1.5 text-xs font-bold text-white hover:bg-[#600C18] disabled:opacity-50 transition shadow-xs"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 sm:px-4 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-50 transition shadow-xs"
               >
                 {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                 <span>Save</span>
               </button>
 
+              {/* Export PDF */}
+              <button
+                type="button"
+                disabled={exportingPdf}
+                onClick={handleExportPdf}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 sm:px-3.5 py-1.5 text-xs font-bold text-white hover:bg-slate-800 transition shadow-xs disabled:opacity-50"
+                title="Download ATS-Friendly Vector PDF"
+              >
+                {exportingPdf ? (
+                  <Loader2 size={13} className="animate-spin text-white" />
+                ) : (
+                  <Download size={13} />
+                )}
+                <span className="hidden sm:inline">{exportingPdf ? "Exporting…" : "Export PDF"}</span>
+              </button>
+
+              {/* More Actions Menu Dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowMoreMenu(!showMoreMenu)}
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition shadow-2xs"
+                  title="More actions &amp; options"
+                  aria-label="More actions"
+                >
+                  <MoreHorizontal size={16} />
+                </button>
+
+                {showMoreMenu && (
+                  <div className="absolute right-0 top-full mt-1.5 w-52 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-xl z-50 animate-in fade-in zoom-in-95 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        handleAnalyzeFull();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-blue-700 bg-blue-50/50 hover:bg-blue-50 hover:text-blue-900 font-semibold transition"
+                    >
+                      <Sparkles size={14} className="text-blue-600" />
+                      <span>Full Resume Analysis</span>
+                    </button>
+
+                    <div className="h-px bg-slate-100 my-1" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        handleOpenPrintView();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium transition"
+                    >
+                      <Printer size={14} className="text-slate-500" />
+                      <span>Print View</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        setShowVersionModal(true);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium transition"
+                    >
+                      <History size={14} className="text-slate-500" />
+                      <span>Version History</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        handleDuplicate();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium transition"
+                    >
+                      <Copy size={14} className="text-slate-500" />
+                      <span>Duplicate Resume</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        setShowUploadModal(true);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium transition"
+                    >
+                      <UploadCloud size={14} className="text-slate-500" />
+                      <span>Import from File</span>
+                    </button>
+
+                    <div className="h-px bg-slate-100 my-1" />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMoreMenu(false);
+                        setShowHelpModal(true);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 hover:text-slate-900 font-medium transition"
+                    >
+                      <HelpCircle size={14} className="text-blue-600" />
+                      <span>How it Works Guide</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {saveStatus && (
-                <span className="text-[11px] font-semibold text-emerald-800 animate-in fade-in">
+                <span className="hidden xl:inline-block text-[11px] font-semibold text-emerald-700 animate-in fade-in">
                   {saveStatus}
                 </span>
               )}
@@ -786,7 +936,7 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
 
         {/* Export Error Alert Banner */}
         {exportError && (
-          <div className="mx-auto max-w-[1700px] px-4 pt-3 print:hidden">
+          <div className="w-full px-4 pt-2 print:hidden shrink-0">
             <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 animate-in fade-in">
               <div className="flex items-center gap-2">
                 <AlertTriangle size={14} className="shrink-0 text-rose-600" />
@@ -819,103 +969,146 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
           </div>
         )}
 
-        {/* ── 2. First-Use Guidance Panel ─────────────────────────────── */}
-        <div className="mx-auto max-w-[1700px] px-4 pt-3 print:hidden">
-          <HowItWorksPanel toolKey="resume-builder" />
-        </div>
+        {/* Optional Guide Modal (On-Demand without shifting workspace) */}
+        {showHelpModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-2xs p-4">
+            <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 max-h-[85vh] overflow-y-auto ce-scrollbar">
+              <button
+                type="button"
+                onClick={() => setShowHelpModal(false)}
+                className="absolute right-4 top-4 p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+              >
+                <X size={18} />
+              </button>
+              <div className="pt-2">
+                <HowItWorksPanel toolKey="resume-builder" />
+              </div>
+            </div>
+          </div>
+        )}
 
-        {/* ── 3. Main Workspace: Desktop 3-Zone Split View ─────────────── */}
-        <div className="mx-auto max-w-[1700px] px-3 sm:px-4 pt-3">
+        {/* ── 2. Main Workspace: Desktop 3-Zone Fixed-Height Viewport / Mobile Scrollable ─── */}
+        <div className="flex-1 min-h-0 w-full p-2.5 sm:p-3 overflow-y-auto lg:overflow-hidden ce-scrollbar">
           {/* Desktop 3-Zone View (Screens >= 1024px) */}
-          <div className="hidden lg:flex items-start gap-4">
+          <div className="hidden lg:flex h-full items-stretch gap-3 overflow-hidden">
             {/* ZONE 1: Left - Sections & Content Panel */}
             <div
-              className={`transition-all duration-200 shrink-0 ${
-                isLeftCollapsed ? "w-12" : "w-[360px] xl:w-[390px]"
+              className={`transition-all duration-200 shrink-0 h-full flex flex-col ${
+                isLeftCollapsed ? "w-12" : "w-[390px] xl:w-[430px]"
               }`}
             >
               {isLeftCollapsed ? (
-                <div className="flex flex-col items-center py-4 bg-white rounded-2xl border border-[#EBDDD1] shadow-xs space-y-4">
+                <div className="flex flex-col items-center py-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-4 h-full">
                   <button
                     onClick={() => setIsLeftCollapsed(false)}
-                    className="p-2 text-[#7A0F1F] hover:bg-[#FFF9ED] rounded-xl transition"
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition"
                     title="Expand Sections Editor"
                   >
                     <PanelLeftOpen size={18} />
                   </button>
-                  <span className="[writing-mode:vertical-rl] text-xs font-bold text-stone-500 tracking-wider">
+                  <span className="[writing-mode:vertical-rl] text-xs font-bold text-slate-500 tracking-wider">
                     SECTIONS ({data.sections.length})
                   </span>
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl border border-[#EBDDD1] p-3 shadow-xs space-y-3">
-                  <div className="flex items-center justify-between border-b border-[#EBDDD1] pb-2">
-                    <span className="font-heading text-xs font-bold text-[#2B1810]">
-                      Sections &amp; Content ({data.sections.length})
+                <div className="h-full flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 shrink-0 bg-white">
+                    <span className="font-heading text-xs font-bold text-slate-800 tracking-tight">
+                      Sections &amp; Content
+                      <span className="ml-2 text-[11px] font-semibold text-slate-400">({data.sections.length})</span>
                     </span>
-                    <button
-                      onClick={() => setIsLeftCollapsed(true)}
-                      className="p-1 text-stone-400 hover:text-stone-700 rounded-lg"
-                      title="Collapse Panel"
-                    >
-                      <PanelLeftClose size={15} />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={analyzingFull}
+                        onClick={handleAnalyzeFull}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition shadow-2xs disabled:opacity-50"
+                        title="Run full AI intelligence audit across entire resume"
+                      >
+                        {analyzingFull ? (
+                          <Loader2 size={11} className="animate-spin text-blue-600" />
+                        ) : (
+                          <Sparkles size={11} className="text-blue-600" />
+                        )}
+                        <span>{analyzingFull ? "Analyzing…" : "Full Analyze"}</span>
+                      </button>
+                      <button
+                        onClick={() => setIsLeftCollapsed(true)}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg transition-colors"
+                        title="Collapse Panel"
+                      >
+                        <PanelLeftClose size={15} />
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Optional Job Description Input Drawer */}
-                  <div className="rounded-xl border border-[#EBDDD1] bg-white p-2.5 space-y-1 shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-[#765F5D]">
-                        Target Job Description (Optional):
-                      </label>
-                      {jobDescription && (
-                        <button
-                          type="button"
-                          onClick={() => setJobDescription("")}
-                          className="text-[10px] text-stone-400 hover:text-stone-700"
-                        >
-                          Clear
-                        </button>
-                      )}
+                  {/* Independent Scrollable Body for Left Editor */}
+                  <div className="flex-1 min-h-0 overflow-y-auto ce-scrollbar p-3.5 space-y-3.5">
+                    {/* Optional Job Description Input Drawer */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                          Target Job Description
+                          <span className="ml-1 text-[10px] font-normal normal-case text-slate-400">(optional)</span>
+                        </label>
+                        {jobDescription && (
+                          <button
+                            type="button"
+                            onClick={() => setJobDescription("")}
+                            className="text-[10px] font-medium text-slate-400 hover:text-slate-700 transition-colors"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <textarea
+                        rows={2}
+                        value={jobDescription}
+                        onChange={(e) => setJobDescription(e.target.value)}
+                        placeholder="Paste a job description to benchmark keywords and match requirements…"
+                        className="w-full text-xs text-slate-800 rounded-lg border border-slate-200 p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none leading-relaxed bg-white"
+                      />
                     </div>
-                    <textarea
-                      rows={2}
-                      value={jobDescription}
-                      onChange={(e) => setJobDescription(e.target.value)}
-                      placeholder="Paste target JD to benchmark keywords and match requirements..."
-                      className="w-full text-xs text-[#2B1810] rounded-lg border border-[#EBDDD1] p-2 focus:outline-hidden resize-none"
+
+                    <SectionEditor
+                      data={data}
+                      onChangeData={handleDataChange}
+                      onImproveBulletAction={handleImproveBulletAction}
+                      activeSectionId={activeSectionId}
+                      onSelectSection={(id) => {
+                        setActiveSectionId(id);
+                        const previewEl = document.getElementById(id);
+                        if (previewEl) previewEl.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }}
+                      onScrollToSection={(secId) => {
+                        const el = document.getElementById(secId);
+                        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }}
+                      onAnalyzeSection={handleImproveSection}
+                      analyzingSectionId={analyzingSectionId}
+                      sectionAnalyses={fullAnalysisReport?.sectionAnalyses}
+                      onOpenAiReview={(secId) => {
+                        setDrawerSectionId(secId || activeSectionId);
+                        setShowAiDrawer(true);
+                        setMobileTab("ai_review");
+                      }}
+                      onAcceptSuggestion={handleAcceptSuggestion}
                     />
                   </div>
-
-                  <SectionEditor
-                    data={data}
-                    onChangeData={handleDataChange}
-                    onImproveBulletAction={handleImproveBulletAction}
-                    activeSectionId={activeSectionId}
-                    onSelectSection={(id) => {
-                      setActiveSectionId(id);
-                      const previewEl = document.getElementById(id);
-                      if (previewEl) previewEl.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }}
-                    onScrollToSection={(secId) => {
-                      const el = document.getElementById(secId);
-                      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }}
-                  />
                 </div>
               )}
             </div>
 
-            {/* ZONE 2: Center - Live Paper Preview Canvas */}
-            <div className="flex-1 min-w-0 flex flex-col items-center">
+            {/* ZONE 2: Center - Live Paper Preview Canvas (Instant Full Visibility) */}
+            <div className="flex-1 min-w-0 h-full flex flex-col bg-slate-100/80 rounded-2xl border border-slate-200 shadow-inner overflow-hidden">
               {/* Center Floating Zoom & Tools Bar */}
-              <div className="w-full max-w-[840px] mb-3 flex flex-wrap items-center justify-between gap-3 bg-white border border-[#EBDDD1] rounded-2xl px-4 py-2 shadow-xs text-xs">
+              <div className="shrink-0 px-3 sm:px-4 py-2 border-b border-slate-200/90 bg-white/95 backdrop-blur-xs flex flex-nowrap items-center justify-between gap-2.5 text-xs z-10 shadow-2xs overflow-x-auto ce-scrollbar">
                 {/* Zoom Controls */}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
                     onClick={() => setZoom((z) => Math.max(50, z - 10))}
-                    className="p-1 rounded-lg border border-[#EBDDD1] text-stone-600 hover:bg-[#FDF7F5] transition"
+                    className="p-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
                     title="Zoom Out"
                   >
                     <ZoomOut size={13} />
@@ -923,70 +1116,75 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
                   <select
                     value={zoom}
                     onChange={(e) => setZoom(Number(e.target.value))}
-                    className="rounded-lg border border-[#EBDDD1] px-2 py-1 text-xs font-mono font-semibold text-stone-700 bg-white"
+                    className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-mono font-semibold text-slate-700 bg-white"
                   >
                     <option value={50}>50%</option>
-                    <option value={75}>75%</option>
-                    <option value={90}>90%</option>
+                    <option value={65}>65%</option>
+                    <option value={75}>75% (Fit Page)</option>
+                    <option value={85}>85%</option>
                     <option value={100}>100%</option>
                     <option value={125}>125%</option>
-                    <option value={150}>150%</option>
                   </select>
                   <button
                     type="button"
                     onClick={() => setZoom((z) => Math.min(150, z + 10))}
-                    className="p-1 rounded-lg border border-[#EBDDD1] text-stone-600 hover:bg-[#FDF7F5] transition"
+                    className="p-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
                     title="Zoom In"
                   >
                     <ZoomIn size={13} />
                   </button>
                   <button
                     type="button"
-                    onClick={() => setZoom(100)}
-                    className="px-2 py-1 text-[11px] font-semibold text-stone-500 hover:text-stone-900"
+                    onClick={() => setZoom(75)}
+                    className={`px-2 py-0.5 rounded-md text-[11px] font-bold transition ${
+                      zoom === 75
+                        ? "bg-blue-600 text-white shadow-2xs"
+                        : "bg-blue-50 text-blue-700 border border-blue-200/70 hover:bg-blue-100"
+                    }`}
+                    title="Fit full page height inside viewport without scrolling"
                   >
-                    Reset
+                    Fit Page
                   </button>
                 </div>
 
                 {/* Page Count & Fit to 1 Page Assistant */}
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[11px] text-stone-600 bg-stone-100 px-2 py-0.5 rounded-md">
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-mono text-[11px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60 hidden sm:inline-block">
                     {data.style.templateId} &bull; {localReport.estimatedPageCount}{" "}
                     {localReport.estimatedPageCount === 1 ? "Page" : "Pages"}
                   </span>
                   <button
                     type="button"
                     onClick={() => setShowFitPageModal(true)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-[#F6B51C] bg-[#FFF9ED] px-2.5 py-1 text-[11px] font-bold text-[#7A0F1F] hover:bg-[#FFF0D4] transition"
+                    className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-900 hover:bg-amber-100 transition shadow-2xs"
                   >
-                    <Sparkles size={11} className="text-[#F6B51C]" />
+                    <Sparkles size={11} className="text-amber-500" />
                     <span>Fit to 1 Page</span>
                   </button>
                 </div>
 
-                {/* Before/After & JD Match */}
-                <div className="flex items-center gap-2">
+                {/* Before/After & Dedicated Print View */}
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
                     onClick={() => setShowBeforeAfterModal(true)}
-                    className="inline-flex items-center gap-1 font-semibold text-[#7A0F1F] hover:underline"
+                    className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:underline"
                   >
                     <SlidersHorizontal size={12} />
-                    <span>Before / After</span>
+                    <span className="hidden sm:inline">Before / After</span>
                   </button>
                   <Link
                     href={`/resume/check?resumeId=${resume.id}`}
-                    className="inline-flex items-center gap-1 font-semibold text-stone-600 hover:underline"
+                    className="inline-flex items-center gap-1 font-semibold text-slate-600 hover:underline"
                   >
                     <Search size={12} />
-                    <span>JD Match</span>
+                    <span className="hidden sm:inline">JD Match</span>
                   </Link>
                 </div>
               </div>
 
-              {/* The Live Document Component with Scaled Paper Container */}
-              <div className="w-full flex justify-center overflow-x-auto pb-12">
+              {/* Center Canvas with Scaled Paper Container */}
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto ce-scrollbar p-3 sm:p-5 flex justify-center items-start">
                 <ResumePreview
                   data={data}
                   onSelectSection={(secId) => {
@@ -1001,58 +1199,72 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
 
             {/* ZONE 3: Right - Design & Formatting Panel */}
             <div
-              className={`transition-all duration-200 shrink-0 ${
-                isRightCollapsed ? "w-12" : "w-[340px] xl:w-[370px]"
+              className={`transition-all duration-200 shrink-0 h-full flex flex-col ${
+                isRightCollapsed ? "w-12" : "w-[340px] xl:w-[380px]"
               }`}
             >
               {isRightCollapsed ? (
-                <div className="flex flex-col items-center py-4 bg-white rounded-2xl border border-[#EBDDD1] shadow-xs space-y-4">
+                <div className="flex flex-col items-center py-6 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-4 h-full">
                   <button
                     onClick={() => setIsRightCollapsed(false)}
-                    className="p-2 text-[#7A0F1F] hover:bg-[#FFF9ED] rounded-xl transition"
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition"
                     title="Expand Design & Formatting Panel"
                   >
                     <Palette size={18} />
                   </button>
-                  <span className="[writing-mode:vertical-rl] text-xs font-bold text-stone-500 tracking-wider">
+                  <span className="[writing-mode:vertical-rl] text-xs font-bold text-slate-500 tracking-wider">
                     DESIGN &amp; STYLES
                   </span>
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl border border-[#EBDDD1] p-3 shadow-xs space-y-3">
-                  <div className="flex items-center justify-between border-b border-[#EBDDD1] pb-2">
-                    <span className="font-heading text-xs font-bold text-[#2B1810]">
+                <div className="h-full flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                  <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 shrink-0 bg-white">
+                    <span className="font-heading text-xs font-bold text-slate-800">
                       Design &amp; Formatting
                     </span>
                     <button
                       onClick={() => setIsRightCollapsed(true)}
-                      className="p-1 text-stone-400 hover:text-stone-700 rounded-lg"
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded-lg transition-colors"
                       title="Collapse Panel"
                     >
                       <PanelRightClose size={15} />
                     </button>
                   </div>
-                  <CustomizePanel
-                    style={data.style}
-                    onChangeStyle={(newStyle) => handleDataChange({ ...data, style: newStyle })}
-                    onFitToOnePage={() => setShowFitPageModal(true)}
-                  />
+                  <div className="flex-1 min-h-0 overflow-y-auto ce-scrollbar">
+                    <CustomizePanel
+                      style={data.style}
+                      onChangeStyle={(newStyle) => handleDataChange({ ...data, style: newStyle })}
+                      onFitToOnePage={() => setShowFitPageModal(true)}
+                      savedResumes={savedResumes}
+                      activeResumeId={resume.id}
+                      onSelectResume={(resId) => {
+                        window.location.href = `/resume/builder?id=${resId}`;
+                      }}
+                      onApplySavedFormat={(savedStyle) => {
+                        handleDataChange({
+                          ...data,
+                          style: savedStyle,
+                        });
+                        setSaveStatus("Applied saved format style & template.");
+                      }}
+                    />
+                  </div>
                 </div>
               )}
             </div>
           </div>
 
           {/* Mobile View (Screens < 1024px) */}
-          <div className="lg:hidden space-y-4">
+          <div className="lg:hidden space-y-4 pb-safe">
             {/* Tab Selector Buttons */}
-            <div className="flex rounded-xl bg-stone-200/60 p-1 text-xs font-bold text-stone-700">
+            <div className="flex rounded-xl bg-slate-200/70 p-1 text-xs font-bold text-slate-700">
               <button
                 type="button"
                 onClick={() => setMobileTab("edit")}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg transition ${
                   mobileTab === "edit"
-                    ? "bg-white text-[#7A0F1F] shadow-xs"
-                    : "hover:text-[#2B1810]"
+                    ? "bg-white text-blue-600 shadow-xs"
+                    : "hover:text-slate-900"
                 }`}
               >
                 <FileText size={14} />
@@ -1064,8 +1276,8 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
                 onClick={() => setMobileTab("customize")}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg transition ${
                   mobileTab === "customize"
-                    ? "bg-white text-[#7A0F1F] shadow-xs"
-                    : "hover:text-[#2B1810]"
+                    ? "bg-white text-blue-600 shadow-xs"
+                    : "hover:text-slate-900"
                 }`}
               >
                 <Palette size={14} />
@@ -1077,8 +1289,8 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
                 onClick={() => setMobileTab("preview")}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg transition ${
                   mobileTab === "preview"
-                    ? "bg-white text-[#7A0F1F] shadow-xs"
-                    : "hover:text-[#2B1810]"
+                    ? "bg-white text-blue-600 shadow-xs"
+                    : "hover:text-slate-900"
                 }`}
               >
                 <Printer size={14} />
@@ -1090,35 +1302,56 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
                 onClick={() => setMobileTab("ai_review")}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg transition ${
                   mobileTab === "ai_review"
-                    ? "bg-white text-[#7A0F1F] shadow-xs"
-                    : "hover:text-[#2B1810]"
+                    ? "bg-white text-blue-600 shadow-xs"
+                    : "hover:text-slate-900"
                 }`}
               >
-                <Sparkles size={14} className="text-[#F6B51C]" />
+                <Sparkles size={14} className="text-amber-500" />
                 <span>AI</span>
               </button>
             </div>
 
             {/* Mobile Tab 1: Section Editor */}
             {mobileTab === "edit" && (
-              <div className="bg-white rounded-2xl border border-[#EBDDD1] p-3 shadow-xs">
+              <div className="bg-white rounded-2xl border border-slate-200 p-3 shadow-xs">
                 <SectionEditor
                   data={data}
                   onChangeData={handleDataChange}
                   onImproveBulletAction={handleImproveBulletAction}
                   activeSectionId={activeSectionId}
                   onSelectSection={(id) => setActiveSectionId(id)}
+                  onAnalyzeSection={handleImproveSection}
+                  analyzingSectionId={analyzingSectionId}
+                  sectionAnalyses={fullAnalysisReport?.sectionAnalyses}
+                  onOpenAiReview={(secId) => {
+                    setDrawerSectionId(secId || activeSectionId);
+                    setShowAiDrawer(true);
+                    setMobileTab("ai_review");
+                  }}
+                  onAcceptSuggestion={handleAcceptSuggestion}
                 />
               </div>
             )}
 
             {/* Mobile Tab 2: Customize */}
             {mobileTab === "customize" && (
-              <div className="bg-white rounded-2xl border border-[#EBDDD1] p-3 shadow-xs">
+              <div className="bg-white rounded-2xl border border-slate-200 p-3 shadow-xs">
                 <CustomizePanel
                   style={data.style}
                   onChangeStyle={(newStyle) => handleDataChange({ ...data, style: newStyle })}
                   onFitToOnePage={() => setShowFitPageModal(true)}
+                  savedResumes={savedResumes}
+                  activeResumeId={resume.id}
+                  onSelectResume={(resId) => {
+                    window.location.href = `/resume/builder?id=${resId}`;
+                  }}
+                  onApplySavedFormat={(savedStyle) => {
+                    handleDataChange({
+                      ...data,
+                      style: savedStyle,
+                    });
+                    setSaveStatus("Applied saved format style & template.");
+                  }}
                 />
               </div>
             )}
@@ -1127,11 +1360,11 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
             {mobileTab === "preview" && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs px-2">
-                  <span className="font-bold text-[#2B1810]">Mobile Live Preview</span>
+                  <span className="font-bold text-slate-900">Mobile Live Preview</span>
                   <button
                     type="button"
                     onClick={() => setShowBeforeAfterModal(true)}
-                    className="text-[#7A0F1F] font-semibold hover:underline"
+                    className="text-blue-600 font-semibold hover:underline"
                   >
                     Before / After
                   </button>
@@ -1152,7 +1385,7 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
 
             {/* Mobile Tab 4: AI Review */}
             {mobileTab === "ai_review" && (
-              <div className="bg-white rounded-2xl border border-[#EBDDD1] p-3 shadow-xs">
+              <div className="bg-white rounded-2xl border border-slate-200 p-3 shadow-xs">
                 <AiReviewPanel
                   report={fullAnalysisReport}
                   analyzingFull={analyzingFull}
@@ -1169,6 +1402,8 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
                     const el = document.getElementById(secId);
                     if (el) el.scrollIntoView({ behavior: "smooth" });
                   }}
+                  focusSectionId={drawerSectionId}
+                  onClearFocusSection={() => setDrawerSectionId(null)}
                 />
               </div>
             )}
@@ -1178,25 +1413,29 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
         {/* ── Desktop Slide-Over AI Review Drawer ─────────────────────── */}
         {showAiDrawer && (
           <div className="fixed inset-0 z-40 flex justify-end bg-black/40 backdrop-blur-2xs">
-            <div className="w-full max-w-xl bg-white h-full shadow-2xl p-6 overflow-y-auto space-y-4 border-l border-[#EBDDD1] animate-in slide-in-from-right duration-200">
-              <div className="flex items-center justify-between border-b border-[#EBDDD1] pb-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#7A0F1F] text-[#F2B63D]">
+            <div className="w-full max-w-xl bg-white h-full shadow-2xl p-6 overflow-y-auto space-y-4 border-l border-slate-200 animate-in slide-in-from-right duration-200">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-600 text-white shadow-2xs">
                     <Sparkles size={16} />
                   </div>
                   <div>
-                    <h3 className="font-heading text-base font-bold text-[#2B1810]">
-                      Full-Resume AI Analysis
+                    <h3 className="font-heading text-base font-bold text-slate-900">
+                      {drawerSectionId
+                        ? `Section AI Optimizer: ${data.sections.find((s) => s.id === drawerSectionId)?.customTitle || "Section"}`
+                        : "Full-Resume AI Intelligence & Review"}
                     </h3>
-                    <p className="text-xs text-[#765F5D]">
-                      Benchmark suggestions grounded strictly in your Career Passport facts.
+                    <p className="text-xs text-slate-500">
+                      {drawerSectionId
+                        ? "Targeted rewrite suggestions and ATS optimizations for this section."
+                        : "Multi-domain benchmark suggestions and section-by-section improvements."}
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowAiDrawer(false)}
-                  className="rounded-lg p-1 text-stone-400 hover:text-stone-700"
+                  className="rounded-lg p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
                 >
                   <X size={18} />
                 </button>
@@ -1218,12 +1457,25 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
                   const el = document.getElementById(secId);
                   if (el) el.scrollIntoView({ behavior: "smooth" });
                 }}
+                focusSectionId={drawerSectionId}
+                onClearFocusSection={() => setDrawerSectionId(null)}
               />
             </div>
           </div>
         )}
 
         {/* ── Modals ──────────────────────────────────────────────────── */}
+        <UploadResumeModal
+          isOpen={showUploadModal}
+          onClose={() => setShowUploadModal(false)}
+          defaultTargetRole={data.targetRole || ""}
+          onSuccess={(result) => {
+            if (result?.resumeId) {
+              window.location.href = `/resume/builder?id=${result.resumeId}`;
+            }
+          }}
+        />
+
         <VersionHistoryModal
           resumeId={resume.id}
           isOpen={showVersionModal}
@@ -1242,26 +1494,26 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
         {/* Fit to 1 Page Assistant Modal */}
         {showFitPageModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-            <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl border border-[#EBDDD1] space-y-4 animate-in fade-in zoom-in duration-150">
-              <div className="flex items-center justify-between border-b border-[#EBDDD1] pb-3">
+            <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#7A0F1F] text-[#F2B63D]">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                     <Sparkles size={14} />
                   </div>
-                  <h4 className="font-heading text-sm font-bold text-[#2B1810]">
+                  <h4 className="font-heading text-sm font-bold text-slate-900">
                     Fit to 1 Page Assistant
                   </h4>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowFitPageModal(false)}
-                  className="text-stone-400 hover:text-stone-700"
+                  className="text-slate-400 hover:text-slate-700"
                 >
                   <X size={16} />
                 </button>
               </div>
 
-              <p className="text-xs text-[#765F5D] leading-relaxed">
+              <p className="text-xs text-slate-500 leading-relaxed">
                 The assistant optimizes typography, margins, and whitespace to pull content that barely spills onto Page 2 back into a crisp single-page presentation without deleting any of your verified credentials.
               </p>
 
@@ -1301,11 +1553,11 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
                 </div>
               </div>
 
-              <div className="flex items-center justify-between border-t border-[#EBDDD1] pt-3">
+              <div className="flex items-center justify-between border-t border-slate-100 pt-3">
                 <button
                   type="button"
                   onClick={() => setShowFitPageModal(false)}
-                  className="rounded-xl border border-[#EBDDD1] bg-white px-3.5 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-50"
+                  className="rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
@@ -1340,7 +1592,7 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
                     await handleSave("Fit to 1 Page adjustments applied", updatedData);
                     setShowFitPageModal(false);
                   }}
-                  className="rounded-xl bg-[#7A0F1F] px-4 py-1.5 text-xs font-bold text-white hover:bg-[#600C18] shadow-xs"
+                  className="rounded-xl bg-blue-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-blue-700 shadow-xs"
                 >
                   Apply Adjustments
                 </button>
@@ -1353,10 +1605,10 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
         {showTruthModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
             <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-              <div className="flex items-center justify-between border-b border-[#EBDDD1] pb-3">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
                   <CheckCheck size={18} className="text-emerald-700" />
-                  <h3 className="font-heading text-lg font-bold text-[#2B1810]">
+                  <h3 className="font-heading text-lg font-bold text-slate-900">
                     Truth Check Verification
                   </h3>
                 </div>
@@ -1371,8 +1623,8 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
 
               {runningTruthCheck ? (
                 <div className="py-12 text-center">
-                  <Loader2 size={32} className="animate-spin text-[#7A0F1F] mx-auto" />
-                  <p className="mt-2 text-xs font-semibold text-[#765F5D]">
+                  <Loader2 size={32} className="animate-spin text-blue-600 mx-auto" />
+                  <p className="mt-2 text-xs font-semibold text-slate-500">
                     Verifying resume claims against Evidence Vault and Career Passport...
                   </p>
                 </div>
@@ -1394,7 +1646,7 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
 
                   {truthReport.items.filter((item) => item.status !== "VERIFIED").length > 0 && (
                     <div className="space-y-2">
-                      <span className="text-xs font-bold text-[#2B1810]">Audit Findings:</span>
+                      <span className="text-xs font-bold text-slate-900">Audit Findings:</span>
                       <div className="max-h-48 overflow-y-auto space-y-1.5">
                         {truthReport.items
                           .filter((item) => item.status !== "VERIFIED")
@@ -1414,7 +1666,7 @@ export function BuilderClient({ user, resume, evidenceItems }: BuilderClientProp
                     <button
                       type="button"
                       onClick={() => setShowTruthModal(false)}
-                      className="rounded-xl bg-[#7A0F1F] px-4 py-2 text-xs font-bold text-white hover:bg-[#600C18]"
+                      className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700"
                     >
                       Done
                     </button>

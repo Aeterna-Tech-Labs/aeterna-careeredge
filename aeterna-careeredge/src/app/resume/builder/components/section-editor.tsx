@@ -1,13 +1,17 @@
 // src/app/resume/builder/components/section-editor.tsx
-// FlowCV-Inspired Section & Entry Customization Editor
-// Granular Entry Fields, HTML5 Drag-and-Drop Reordering, Inline AI Diff, and Custom Sections
+// Upgraded Accessible Accordion & Focus-View Section Editor
+// 48-54px row targets, single-section focus mode, collapsible entry cards,
+// drag-and-drop reordering with keyboard fallbacks, overflow actions (duplicate/rename/delete),
+// and a unified + Add Section menu.
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type {
   FullResumeData,
   ResumeSection,
   ResumeEntry,
   SectionType,
+  SectionAnalysisResult,
+  SectionSuggestion,
 } from "@/lib/resume/types";
 import { getFrameworkForDomain } from "@/lib/resume/frameworks";
 import {
@@ -17,26 +21,32 @@ import {
   Trash2,
   MoveUp,
   MoveDown,
-  Wand2,
-  Edit2,
   ChevronDown,
   ChevronUp,
   Calendar,
   MapPin,
-  ExternalLink,
-  Tag,
   AlignLeft,
   List,
   GripVertical,
   Check,
   X,
   Sparkles,
-  ShieldCheck,
   BookOpen,
   Award,
   Globe,
   Briefcase,
   Lightbulb,
+  Edit2,
+  Copy,
+  MoreVertical,
+  GraduationCap,
+  FolderGit2,
+  Wrench,
+  Wand2,
+  Loader2,
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
 } from "lucide-react";
 
 let idCounter = 0;
@@ -55,6 +65,11 @@ interface SectionEditorProps {
   onScrollToSection?: (sectionId: string) => void;
   activeSectionId?: string;
   onSelectSection?: (sectionId: string) => void;
+  onAnalyzeSection?: (sectionId: string) => Promise<void>;
+  analyzingSectionId?: string | null;
+  sectionAnalyses?: SectionAnalysisResult[];
+  onOpenAiReview?: (sectionId?: string) => void;
+  onAcceptSuggestion?: (sectionId: string, suggestion: SectionSuggestion) => void;
 }
 
 interface BulletDiffState {
@@ -73,6 +88,11 @@ export function SectionEditor({
   onScrollToSection,
   activeSectionId: externalActiveSectionId,
   onSelectSection,
+  onAnalyzeSection,
+  analyzingSectionId,
+  sectionAnalyses,
+  onOpenAiReview,
+  onAcceptSuggestion,
 }: SectionEditorProps) {
   const [activeSectionId, setActiveSectionId] = useState<string>(
     externalActiveSectionId || data.sections[0]?.id || "sec_summary"
@@ -81,19 +101,21 @@ export function SectionEditor({
   const [newSkillInput, setNewSkillInput] = useState("");
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
   const [newTagInputs, setNewTagInputs] = useState<Record<string, string>>({});
+  const [openOverflowId, setOpenOverflowId] = useState<string | null>(null);
+  const [addSectionMenuOpen, setAddSectionMenuOpen] = useState(false);
 
   // Drag and drop states
   const [draggedSectionIdx, setDraggedSectionIdx] = useState<number | null>(null);
   const [dragOverSectionIdx, setDragOverSectionIdx] = useState<number | null>(null);
-
   const [draggedEntryIdx, setDraggedEntryIdx] = useState<number | null>(null);
   const [dragOverEntryIdx, setDragOverEntryIdx] = useState<number | null>(null);
-
   const [draggedBulletKey, setDraggedBulletKey] = useState<string | null>(null);
   const [dragOverBulletKey, setDragOverBulletKey] = useState<string | null>(null);
 
-  // Active Bullet Side-by-Side Diff Modal/Box
+  // Active Bullet Side-by-Side Diff Modal
   const [activeBulletDiff, setActiveBulletDiff] = useState<BulletDiffState | null>(null);
+
+  const addMenuRef = useRef<HTMLDivElement>(null);
 
   // Sync external active section ID if updated from preview click
   useEffect(() => {
@@ -102,16 +124,45 @@ export function SectionEditor({
     }
   }, [externalActiveSectionId, activeSectionId]);
 
+  // Close menus on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (addMenuRef.current && !addMenuRef.current.contains(target as Node)) {
+        setAddSectionMenuOpen(false);
+      }
+      if (target && target.closest("[data-section-overflow]")) {
+        return;
+      }
+      setOpenOverflowId(null);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpenOverflowId(null);
+        setAddSectionMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   const framework = getFrameworkForDomain(data.domainKey);
 
-  // Section Reordering via Up/Down or Drag & Drop
+  // Section Reordering
   function moveSection(index: number, direction: "up" | "down") {
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= data.sections.length) return;
-
+    const targetIdx = direction === "up" ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= data.sections.length) return;
     const updated = [...data.sections];
     const [moved] = updated.splice(index, 1);
-    updated.splice(targetIndex, 0, moved);
+    updated.splice(targetIdx, 0, moved);
     onChangeData({ ...data, sections: updated });
   }
 
@@ -140,7 +191,6 @@ export function SectionEditor({
     setDragOverSectionIdx(null);
   }
 
-  // Toggle Section Visibility
   function toggleVisibility(sectionId: string) {
     const updated = data.sections.map((s) =>
       s.id === sectionId ? { ...s, visible: !s.visible } : s
@@ -148,27 +198,30 @@ export function SectionEditor({
     onChangeData({ ...data, sections: updated });
   }
 
-  // Add Custom Section
   function addCustomSection(
     type: SectionType,
     customTitle: string,
     displayMode: "bullets" | "paragraph" | "tags" = "bullets"
   ) {
-    const newSec: ResumeSection = {
-      id: createItemId(`sec_${type}`),
+    const newSectionId = createItemId(`sec_${type}`);
+    const newSection: ResumeSection = {
+      id: newSectionId,
       type,
       customTitle,
       visible: true,
       layoutOptions: { displayMode },
       entries: [
         {
-          id: createItemId("ent"),
+          id: createItemId(`ent_${type}`),
           title: "New Item",
           subtitle: "Organization / Institution",
+          startDate: "",
+          endDate: "",
+          isCurrent: false,
           bullets: [
             {
               id: createItemId("b"),
-              text: "Documented role responsibility, procedure, or key verified output.",
+              text: "Key achievement, leadership responsibility, or quantifiable outcome.",
               provenance: "STUDENT_INPUT",
               isApproved: true,
             },
@@ -177,21 +230,43 @@ export function SectionEditor({
       ],
     };
 
-    onChangeData({ ...data, sections: [...data.sections, newSec] });
-    setActiveSectionId(newSec.id);
-    if (onSelectSection) onSelectSection(newSec.id);
+    const updatedSections = [...data.sections, newSection];
+    onChangeData({ ...data, sections: updatedSections });
+    setActiveSectionId(newSectionId);
+    setExpandedEntryId(newSection.entries[0]?.id || null);
+    setAddSectionMenuOpen(false);
+    if (onSelectSection) onSelectSection(newSectionId);
   }
 
-  // Delete Section
+  function duplicateSection(sectionId: string) {
+    const sec = data.sections.find((s) => s.id === sectionId);
+    if (!sec) return;
+    const newSec: ResumeSection = {
+      ...sec,
+      id: createItemId(`sec_${sec.type}`),
+      customTitle: `${sec.customTitle} (Copy)`,
+      entries: sec.entries.map((e) => ({
+        ...e,
+        id: createItemId(`ent_${sec.type}`),
+        bullets: e.bullets.map((b) => ({ ...b, id: createItemId("b") })),
+      })),
+    };
+    const secIdx = data.sections.findIndex((s) => s.id === sectionId);
+    const updated = [...data.sections];
+    updated.splice(secIdx + 1, 0, newSec);
+    onChangeData({ ...data, sections: updated });
+    setActiveSectionId(newSec.id);
+  }
+
   function deleteSection(sectionId: string) {
+    if (!confirm("Are you sure you want to delete this section?")) return;
     const updated = data.sections.filter((s) => s.id !== sectionId);
     onChangeData({ ...data, sections: updated });
-    if (activeSectionId === sectionId) {
-      setActiveSectionId(updated[0]?.id || "");
+    if (activeSectionId === sectionId && updated.length > 0) {
+      setActiveSectionId(updated[0].id);
     }
   }
 
-  // Rename Section
   function renameSection(sectionId: string, newTitle: string) {
     const updated = data.sections.map((s) =>
       s.id === sectionId ? { ...s, customTitle: newTitle } : s
@@ -199,29 +274,18 @@ export function SectionEditor({
     onChangeData({ ...data, sections: updated });
   }
 
-  // Active section data
-  const currentSection =
-    data.sections.find((s) => s.id === activeSectionId) || data.sections[0];
-
-  // Update Section Display Mode
   function setSectionDisplayMode(mode: "bullets" | "paragraph" | "tags") {
-    if (!currentSection) return;
-    const updatedSections = data.sections.map((s) =>
-      s.id === currentSection.id
-        ? {
-            ...s,
-            layoutOptions: {
-              ...(s.layoutOptions || {}),
-              displayMode: mode,
-            },
-          }
+    const updated = data.sections.map((s) =>
+      s.id === activeSectionId
+        ? { ...s, layoutOptions: { ...(s.layoutOptions || {}), displayMode: mode } }
         : s
     );
-    onChangeData({ ...data, sections: updatedSections });
+    onChangeData({ ...data, sections: updated });
   }
 
-  // Entry Reordering (Move & Drag/Drop)
+  // Entry operations
   function moveEntry(entryIdx: number, direction: "up" | "down") {
+    const currentSection = data.sections.find((s) => s.id === activeSectionId);
     if (!currentSection) return;
     const targetIdx = direction === "up" ? entryIdx - 1 : entryIdx + 1;
     if (targetIdx < 0 || targetIdx >= currentSection.entries.length) return;
@@ -250,6 +314,7 @@ export function SectionEditor({
 
   function handleEntryDrop(e: React.DragEvent, toIdx: number) {
     e.preventDefault();
+    const currentSection = data.sections.find((s) => s.id === activeSectionId);
     const fromIdx = Number(e.dataTransfer.getData("text/plain"));
     if (!isNaN(fromIdx) && fromIdx !== toIdx && currentSection) {
       const updatedEntries = [...currentSection.entries];
@@ -264,8 +329,9 @@ export function SectionEditor({
     setDragOverEntryIdx(null);
   }
 
-  // Bullet Reordering (Move & Drag/Drop)
+  // Bullet operations
   function moveBullet(entIdx: number, bIdx: number, direction: "up" | "down") {
+    const currentSection = data.sections.find((s) => s.id === activeSectionId);
     if (!currentSection) return;
     const targetIdx = direction === "up" ? bIdx - 1 : bIdx + 1;
     const updatedEntries = [...currentSection.entries];
@@ -296,17 +362,24 @@ export function SectionEditor({
 
   function handleBulletDrop(e: React.DragEvent, entIdx: number, toBIdx: number) {
     e.preventDefault();
+    const currentSection = data.sections.find((s) => s.id === activeSectionId);
     const dataStr = e.dataTransfer.getData("text/plain");
     const [fromEntStr, fromBStr] = dataStr.split(":");
     const fromEntIdx = Number(fromEntStr);
     const fromBIdx = Number(fromBStr);
 
-    if (fromEntIdx === entIdx && fromBIdx !== toBIdx && currentSection) {
+    if (
+      !isNaN(fromEntIdx) &&
+      !isNaN(fromBIdx) &&
+      fromEntIdx === entIdx &&
+      fromBIdx !== toBIdx &&
+      currentSection
+    ) {
       const updatedEntries = [...currentSection.entries];
-      const updatedBullets = [...updatedEntries[entIdx].bullets];
-      const [moved] = updatedBullets.splice(fromBIdx, 1);
-      updatedBullets.splice(toBIdx, 0, moved);
-      updatedEntries[entIdx] = { ...updatedEntries[entIdx], bullets: updatedBullets };
+      const targetBullets = [...updatedEntries[entIdx].bullets];
+      const [moved] = targetBullets.splice(fromBIdx, 1);
+      targetBullets.splice(toBIdx, 0, moved);
+      updatedEntries[entIdx] = { ...updatedEntries[entIdx], bullets: targetBullets };
 
       const updatedSections = data.sections.map((s) =>
         s.id === currentSection.id ? { ...s, entries: updatedEntries } : s
@@ -317,32 +390,32 @@ export function SectionEditor({
     setDragOverBulletKey(null);
   }
 
-  // Tag Management
   function addEntryTag(entryIdx: number, tagText: string) {
+    const currentSection = data.sections.find((s) => s.id === activeSectionId);
     if (!currentSection || !tagText.trim()) return;
     const updatedEntries = [...currentSection.entries];
-    const currentTags = updatedEntries[entryIdx].tags || [];
-    if (!currentTags.includes(tagText.trim())) {
-      updatedEntries[entryIdx].tags = [...currentTags, tagText.trim()];
-      const updatedSections = data.sections.map((s) =>
-        s.id === currentSection.id ? { ...s, entries: updatedEntries } : s
-      );
-      onChangeData({ ...data, sections: updatedSections });
-    }
-  }
+    const tags = updatedEntries[entryIdx].tags || [];
+    updatedEntries[entryIdx] = { ...updatedEntries[entryIdx], tags: [...tags, tagText.trim()] };
 
-  function removeEntryTag(entryIdx: number, tagIdx: number) {
-    if (!currentSection) return;
-    const updatedEntries = [...currentSection.entries];
-    const currentTags = updatedEntries[entryIdx].tags || [];
-    updatedEntries[entryIdx].tags = currentTags.filter((_, i) => i !== tagIdx);
     const updatedSections = data.sections.map((s) =>
       s.id === currentSection.id ? { ...s, entries: updatedEntries } : s
     );
     onChangeData({ ...data, sections: updatedSections });
   }
 
-  // AI Bullet Improvement Handler (Side-by-side Diff Preview)
+  function removeEntryTag(entryIdx: number, tagIdx: number) {
+    const currentSection = data.sections.find((s) => s.id === activeSectionId);
+    if (!currentSection) return;
+    const updatedEntries = [...currentSection.entries];
+    const tags = (updatedEntries[entryIdx].tags || []).filter((_, i) => i !== tagIdx);
+    updatedEntries[entryIdx] = { ...updatedEntries[entryIdx], tags };
+
+    const updatedSections = data.sections.map((s) =>
+      s.id === currentSection.id ? { ...s, entries: updatedEntries } : s
+    );
+    onChangeData({ ...data, sections: updatedSections });
+  }
+
   async function triggerBulletImprovement(
     entIdx: number,
     bIdx: number,
@@ -353,35 +426,21 @@ export function SectionEditor({
       entIdx,
       bIdx,
       originalText: bulletText,
-      improvedText: "Analyzing phrasing and generating ATS-optimized improvement...",
+      improvedText: "",
       action,
       loading: true,
     });
-
     try {
       const improved = await onImproveBulletAction(bulletText, action);
-      setActiveBulletDiff({
-        entIdx,
-        bIdx,
-        originalText: bulletText,
-        improvedText: improved,
-        action,
-        loading: false,
-      });
+      setActiveBulletDiff((prev) => (prev ? { ...prev, improvedText: improved, loading: false } : null));
     } catch {
-      setActiveBulletDiff((prev) =>
-        prev
-          ? {
-              ...prev,
-              improvedText: "Failed to generate AI rewrite. Please check connectivity or retry.",
-              loading: false,
-            }
-          : null
-      );
+      setActiveBulletDiff(null);
+      alert("AI improvement failed. Please check network or try again.");
     }
   }
 
   function acceptBulletDiff() {
+    const currentSection = data.sections.find((s) => s.id === activeSectionId);
     if (!activeBulletDiff || !currentSection) return;
     const { entIdx, bIdx, improvedText } = activeBulletDiff;
     const updatedEntries = [...currentSection.entries];
@@ -400,1168 +459,1047 @@ export function SectionEditor({
     setActiveBulletDiff(null);
   }
 
+  const getSectionIcon = (type: SectionType) => {
+    switch (type) {
+      case "summary": return Sparkles;
+      case "experience": return Briefcase;
+      case "education": return GraduationCap;
+      case "projects": return FolderGit2;
+      case "skills": return Wrench;
+      case "certifications": return Award;
+      case "publications": return BookOpen;
+      case "languages": return Globe;
+      default: return Lightbulb;
+    }
+  };
+
+  const currentSection = data.sections.find((s) => s.id === activeSectionId) || data.sections[0];
+
   return (
     <div className="space-y-4 text-xs">
-      {/* ── Section Navigation & Drag-and-Drop Reorder Bar ───────────── */}
-      <div className="space-y-1.5 border-b border-[#EBDDD1] pb-3">
-        <div className="flex items-center justify-between text-[11px] text-[#765F5D] px-1">
-          <span className="font-bold uppercase tracking-wider">Drag tabs or click to edit:</span>
-          <span>{data.sections.length} Sections</span>
+      {/* ── Section Accordion & Focus List ── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-secondary-text px-1 pb-1">
+          <span>Sections ({data.sections.length})</span>
+          <span className="text-[11px] font-normal text-muted-text">Click row to edit</span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          {data.sections.map((sec, idx) => {
-            const isActive = sec.id === activeSectionId;
-            const isDragging = draggedSectionIdx === idx;
-            const isOver = dragOverSectionIdx === idx;
+        {data.sections.map((sec, idx) => {
+          const isFocused = sec.id === activeSectionId;
+          const isDragging = draggedSectionIdx === idx;
+          const isOver = dragOverSectionIdx === idx;
+          const SectionIcon = getSectionIcon(sec.type);
+          const entryCount = sec.type === "summary" ? 1 : sec.type === "skills" ? (sec.entries[0]?.tags?.length || 0) : sec.entries.length;
+          const sectionAnalysis = sectionAnalyses?.find((s) => s.sectionId === sec.id);
 
-            return (
+          return (
+            <div
+              key={sec.id}
+              draggable
+              onDragStart={(e) => handleSectionDragStart(e, idx)}
+              onDragOver={(e) => handleSectionDragOver(e, idx)}
+              onDrop={(e) => handleSectionDrop(e, idx)}
+              className={`rounded-2xl border transition-all duration-200 ${
+                openOverflowId === sec.id ? "overflow-visible z-40 relative" : "overflow-hidden"
+              } ${
+                isDragging
+                  ? "opacity-40 border-primary bg-surface-muted"
+                  : isOver
+                    ? "border-2 border-primary bg-[#FFF8F0]"
+                    : isFocused
+                      ? "border-primary bg-surface shadow-md ring-1 ring-primary/20"
+                      : "border-border bg-surface hover:border-primary/40 hover:shadow-xs"
+              }`}
+            >
+              {/* Row Header (48-52px height) */}
               <div
-                key={sec.id}
-                draggable
-                onDragStart={(e) => handleSectionDragStart(e, idx)}
-                onDragOver={(e) => handleSectionDragOver(e, idx)}
-                onDrop={(e) => handleSectionDrop(e, idx)}
-                className={`group flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs transition select-none cursor-grab active:cursor-grabbing ${
-                  isDragging
-                    ? "opacity-40 border-[#7A0F1F] bg-[#FFF9ED]"
-                    : isOver
-                      ? "border-2 border-[#7A0F1F] bg-[#FFF9ED]/60"
-                      : isActive
-                        ? "border-[#7A0F1F] bg-[#FFF9ED] font-bold text-[#7A0F1F] shadow-xs ring-1 ring-[#7A0F1F]/20"
-                        : sec.visible
-                          ? "border-[#EBDDD1] bg-white text-[#2B1810] hover:bg-[#FDF7F5]"
-                          : "border-dashed border-stone-300 bg-stone-100 text-stone-400"
-                }`}
                 onClick={() => {
                   setActiveSectionId(sec.id);
-                  setExpandedEntryId(null);
                   if (onSelectSection) onSelectSection(sec.id);
                   if (onScrollToSection) onScrollToSection(sec.id);
                 }}
+                className={`flex items-center justify-between gap-3 px-4 py-4 cursor-pointer select-none transition-colors ${
+                  isFocused ? "bg-[#FFF8F0]/80 border-b border-border/80" : ""
+                }`}
               >
-                <GripVertical
-                  size={12}
-                  className="text-stone-300 group-hover:text-stone-600 shrink-0"
-                />
-                <span className="truncate max-w-[140px]">{sec.customTitle}</span>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleVisibility(sec.id);
-                  }}
-                  className="text-stone-400 hover:text-stone-700 ml-0.5"
-                  title={sec.visible ? "Hide section" : "Show section"}
-                >
-                  {sec.visible ? <Eye size={11} /> : <EyeOff size={11} />}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Section Management Header ─────────────────────────────────── */}
-      {currentSection && (
-        <div className="rounded-2xl border border-[#EBDDD1] bg-white p-4 shadow-sm space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#EBDDD1] pb-3">
-            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-              {editingTitleId === currentSection.id ? (
-                <input
-                  type="text"
-                  value={currentSection.customTitle}
-                  onChange={(e) => renameSection(currentSection.id, e.target.value)}
-                  onBlur={() => setEditingTitleId(null)}
-                  onKeyDown={(e) => e.key === "Enter" && setEditingTitleId(null)}
-                  autoFocus
-                  className="rounded-lg border border-[#7A0F1F] px-2 py-1 text-xs font-bold text-[#2B1810] focus:outline-hidden"
-                />
-              ) : (
-                <div
-                  className="flex items-center gap-1.5 cursor-pointer group"
-                  onClick={() => setEditingTitleId(currentSection.id)}
-                  title="Click to rename section title"
-                >
-                  <h3 className="font-heading text-sm font-bold text-[#2B1810]">
-                    {currentSection.customTitle}
-                  </h3>
-                  <Edit2 size={12} className="text-stone-400 group-hover:text-[#7A0F1F]" />
-                </div>
-              )}
-
-              <span className="rounded-md bg-stone-100 px-2 py-0.5 text-[10px] text-stone-600 font-mono">
-                {currentSection.type}
-              </span>
-            </div>
-
-            {/* Display Mode Toggle (Bullets vs Narrative Paragraph) */}
-            {currentSection.type !== "skills" && currentSection.type !== "summary" && (
-              <div className="flex items-center gap-1 rounded-xl border border-[#EBDDD1] bg-[#FCF9F6] p-0.5">
-                <button
-                  type="button"
-                  onClick={() => setSectionDisplayMode("bullets")}
-                  className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-semibold transition ${
-                    (currentSection.layoutOptions?.displayMode || "bullets") === "bullets"
-                      ? "bg-[#7A0F1F] text-white shadow-xs"
-                      : "text-stone-600 hover:text-stone-900"
-                  }`}
-                  title="Display as Bullet Points"
-                >
-                  <List size={11} />
-                  <span>Bullets</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSectionDisplayMode("paragraph")}
-                  className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-semibold transition ${
-                    currentSection.layoutOptions?.displayMode === "paragraph"
-                      ? "bg-[#7A0F1F] text-white shadow-xs"
-                      : "text-stone-600 hover:text-stone-900"
-                  }`}
-                  title="Display as Narrative Paragraph"
-                >
-                  <AlignLeft size={11} />
-                  <span>Paragraph</span>
-                </button>
-              </div>
-            )}
-
-            {/* Reorder and Delete Controls */}
-            <div className="flex items-center gap-1 text-stone-600">
-              {(() => {
-                const idx = data.sections.findIndex((s) => s.id === currentSection.id);
-                return (
-                  <>
-                    <button
-                      type="button"
-                      disabled={idx === 0}
-                      onClick={() => moveSection(idx, "up")}
-                      className="rounded p-1 hover:bg-stone-100 disabled:opacity-30"
-                      title="Move Section Up (Alt+Up)"
-                    >
-                      <MoveUp size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={idx === data.sections.length - 1}
-                      onClick={() => moveSection(idx, "down")}
-                      className="rounded p-1 hover:bg-stone-100 disabled:opacity-30"
-                      title="Move Section Down (Alt+Down)"
-                    >
-                      <MoveDown size={13} />
-                    </button>
-                  </>
-                );
-              })()}
-
-              <button
-                type="button"
-                onClick={() => toggleVisibility(currentSection.id)}
-                className="rounded p-1 hover:bg-stone-100 ml-1"
-                title={currentSection.visible ? "Hide from resume" : "Show in resume"}
-              >
-                {currentSection.visible ? <Eye size={13} /> : <EyeOff size={13} />}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm(`Delete the "${currentSection.customTitle}" section?`)) {
-                    deleteSection(currentSection.id);
-                  }
-                }}
-                className="rounded p-1 text-stone-400 hover:text-rose-700 ml-1"
-                title="Delete Section"
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          </div>
-
-          {/* ── Summary Section Editor ──────────────────────────────────── */}
-          {currentSection.type === "summary" && (
-            <div className="space-y-3">
-              <label className="block text-[11px] font-semibold text-[#765F5D]">
-                Professional Summary / Executive Pitch:
-              </label>
-              <textarea
-                rows={5}
-                value={currentSection.entries[0]?.text || ""}
-                onChange={(e) => {
-                  const updatedEntries = [
-                    {
-                      id: currentSection.entries[0]?.id || createItemId("ent_sum"),
-                      title: "Summary",
-                      text: e.target.value,
-                      bullets: [],
-                    },
-                  ];
-                  const updatedSections = data.sections.map((s) =>
-                    s.id === currentSection.id ? { ...s, entries: updatedEntries } : s
-                  );
-                  onChangeData({ ...data, sections: updatedSections });
-                }}
-                placeholder="Highlight 2-3 key competencies, verified career focus, and demonstrable impact..."
-                className="w-full rounded-xl border border-[#EBDDD1] bg-white p-3 text-xs leading-relaxed text-[#2B1810] focus:border-[#7A0F1F] focus:outline-hidden"
-              />
-            </div>
-          )}
-
-          {/* ── Skills Section Editor ───────────────────────────────────── */}
-          {currentSection.type === "skills" && (
-            <div className="space-y-3">
-              <label className="block text-[11px] font-semibold text-[#765F5D]">
-                Skills &amp; Competencies:
-              </label>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newSkillInput}
-                  onChange={(e) => setNewSkillInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && newSkillInput.trim()) {
-                      e.preventDefault();
-                      const currentTags = currentSection.entries[0]?.tags || [];
-                      const updatedTags = [...currentTags, newSkillInput.trim()];
-                      const updatedEntries = [
-                        {
-                          id: currentSection.entries[0]?.id || createItemId("ent_skills"),
-                          title: "Competencies",
-                          tags: updatedTags,
-                          bullets: [],
-                        },
-                      ];
-                      const updatedSections = data.sections.map((s) =>
-                        s.id === currentSection.id ? { ...s, entries: updatedEntries } : s
-                      );
-                      onChangeData({ ...data, sections: updatedSections });
-                      setNewSkillInput("");
-                    }
-                  }}
-                  placeholder="Type skill name and press Enter (e.g. Next.js, Financial Modeling, ICD-10)..."
-                  className="flex-1 rounded-xl border border-[#EBDDD1] bg-white px-3 py-2 text-xs text-[#2B1810] focus:border-[#7A0F1F] focus:outline-hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!newSkillInput.trim()) return;
-                    const currentTags = currentSection.entries[0]?.tags || [];
-                    const updatedTags = [...currentTags, newSkillInput.trim()];
-                    const updatedEntries = [
-                      {
-                        id: currentSection.entries[0]?.id || createItemId("ent_skills"),
-                        title: "Competencies",
-                        tags: updatedTags,
-                        bullets: [],
-                      },
-                    ];
-                    const updatedSections = data.sections.map((s) =>
-                      s.id === currentSection.id ? { ...s, entries: updatedEntries } : s
-                    );
-                    onChangeData({ ...data, sections: updatedSections });
-                    setNewSkillInput("");
-                  }}
-                  className="rounded-xl bg-[#7A0F1F] px-4 py-2 text-xs font-bold text-white hover:bg-[#600C18]"
-                >
-                  Add Skill
-                </button>
-              </div>
-
-              {/* Tags Cloud */}
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {(currentSection.entries[0]?.tags || []).map((skill, sIdx) => (
-                  <span
-                    key={sIdx}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#EBDDD1] bg-stone-50 px-2.5 py-1 text-xs text-[#2B1810]"
+                {/* Left: Drag grip + Icon + Title + Count */}
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div
+                    className="p-1 text-muted-text hover:text-foreground cursor-grab active:cursor-grabbing shrink-0"
+                    title="Drag to reorder section"
                   >
-                    <span>{skill}</span>
+                    <GripVertical size={14} />
+                  </div>
+
+                  <div className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 ${
+                    isFocused ? "bg-primary text-white" : "bg-surface-muted text-primary"
+                  }`}>
+                    <SectionIcon size={15} />
+                  </div>
+
+                  {editingTitleId === sec.id ? (
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        defaultValue={sec.customTitle}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            renameSection(sec.id, e.currentTarget.value);
+                            setEditingTitleId(null);
+                          } else if (e.key === "Escape") {
+                            setEditingTitleId(null);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          renameSection(sec.id, e.target.value);
+                          setEditingTitleId(null);
+                        }}
+                        autoFocus
+                        className="h-8 px-2.5 rounded-lg border-2 border-primary bg-surface text-xs font-bold text-foreground w-full max-w-xs focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          const input = (e.currentTarget.previousSibling as HTMLInputElement);
+                          renameSection(sec.id, input.value);
+                          setEditingTitleId(null);
+                        }}
+                        className="px-2.5 py-1 rounded-md bg-primary text-[10px] font-bold text-white shrink-0 hover:bg-primary-dark transition-colors"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-baseline gap-2 min-w-0">
+                      <span className={`font-bold text-sm truncate ${isFocused ? "text-primary" : "text-foreground"}`}>
+                        {sec.customTitle}
+                      </span>
+                      <span className="text-[11px] text-muted-text font-medium shrink-0">
+                        ({entryCount} {sec.type === "skills" ? "skills" : entryCount === 1 ? "item" : "items"})
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right: Analyze Button, Visibility, Reorder alternatives, Overflow Menu */}
+                <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  {/* Analyze Section Button */}
+                  {onAnalyzeSection && (
                     <button
                       type="button"
+                      disabled={analyzingSectionId === sec.id}
                       onClick={() => {
-                        const currentTags = currentSection.entries[0]?.tags || [];
-                        const updatedTags = currentTags.filter((_, i) => i !== sIdx);
-                        const updatedEntries = [
-                          {
-                            ...currentSection.entries[0],
-                            tags: updatedTags,
-                          },
-                        ];
-                        const updatedSections = data.sections.map((s) =>
-                          s.id === currentSection.id ? { ...s, entries: updatedEntries } : s
-                        );
-                        onChangeData({ ...data, sections: updatedSections });
+                        setActiveSectionId(sec.id);
+                        if (onSelectSection) onSelectSection(sec.id);
+                        onAnalyzeSection(sec.id);
                       }}
-                      className="text-stone-400 hover:text-rose-700"
-                    >
-                      &times;
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ── Standard Entry List (Drag-and-Drop Accordion) ───────────── */}
-          {currentSection.type !== "summary" && currentSection.type !== "skills" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[#765F5D] uppercase tracking-wider">
-                  Entries ({currentSection.entries.length}) &bull; Drag to reorder
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newEntry: ResumeEntry = {
-                      id: createItemId(`ent_${currentSection.type}`),
-                      title: "New Item",
-                      subtitle: "Organization / Institution",
-                      startDate: "",
-                      endDate: "",
-                      isCurrent: false,
-                      location: "",
-                      url: "",
-                      score: "",
-                      tags: [],
-                      bullets: [
-                        {
-                          id: createItemId("b"),
-                          text: "Documented key deliverable, procedure, or measurable impact.",
-                          provenance: "STUDENT_INPUT",
-                          isApproved: true,
-                        },
-                      ],
-                    };
-                    const updatedEntries = [...currentSection.entries, newEntry];
-                    const updatedSections = data.sections.map((s) =>
-                      s.id === currentSection.id ? { ...s, entries: updatedEntries } : s
-                    );
-                    onChangeData({ ...data, sections: updatedSections });
-                    setExpandedEntryId(newEntry.id);
-                  }}
-                  className="inline-flex items-center gap-1 rounded-xl border border-[#7A0F1F] bg-[#FFF9ED] px-3 py-1.5 text-xs font-bold text-[#7A0F1F] hover:bg-[#FFF0D4] transition"
-                >
-                  <Plus size={12} />
-                  <span>Add {currentSection.customTitle.replace(/s$/, "") || "Entry"}</span>
-                </button>
-              </div>
-
-              {/* Entries Accordion Cards */}
-              <div className="space-y-3">
-                {currentSection.entries.map((entry, entIdx) => {
-                  const isExpanded =
-                    expandedEntryId === entry.id ||
-                    (expandedEntryId === null && entIdx === 0);
-                  const tagInput = newTagInputs[entry.id] || "";
-                  const isDragging = draggedEntryIdx === entIdx;
-                  const isOver = dragOverEntryIdx === entIdx;
-
-                  return (
-                    <div
-                      key={entry.id}
-                      draggable
-                      onDragStart={(e) => handleEntryDragStart(e, entIdx)}
-                      onDragOver={(e) => handleEntryDragOver(e, entIdx)}
-                      onDrop={(e) => handleEntryDrop(e, entIdx)}
-                      className={`rounded-2xl border transition shadow-xs space-y-3 ${
-                        isDragging
-                          ? "opacity-40 border-[#7A0F1F] bg-[#FFF9ED]"
-                          : isOver
-                            ? "border-2 border-[#7A0F1F] bg-[#FFF9ED]/60"
-                            : "border-[#EBDDD1] bg-[#FFFBF9] p-3.5"
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all shadow-2xs disabled:opacity-50 ${
+                        analyzingSectionId === sec.id
+                          ? "bg-blue-100 text-blue-800 border border-blue-300"
+                          : sectionAnalysis
+                          ? "bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100"
+                          : "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100"
                       }`}
+                      title={`Run AI analysis for ${sec.customTitle} section`}
                     >
-                      {/* Compact Collapsed Card Header */}
-                      <div className="flex items-center justify-between gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setExpandedEntryId(isExpanded ? "" : entry.id)}
-                          className="flex items-center gap-2 text-left flex-1 min-w-0 group"
-                        >
-                          <GripVertical
-                            size={14}
-                            className="text-stone-300 group-hover:text-stone-600 shrink-0 cursor-grab"
-                          />
-                          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#7A0F1F]/10 text-xs font-bold text-[#7A0F1F] shrink-0">
-                            {entIdx + 1}
-                          </span>
+                      {analyzingSectionId === sec.id ? (
+                        <Loader2 size={12} className="animate-spin text-blue-600" />
+                      ) : (
+                        <Sparkles size={12} className={sectionAnalysis ? "text-emerald-600" : "text-blue-600"} />
+                      )}
+                      <span>
+                        {analyzingSectionId === sec.id
+                          ? "Analyzing…"
+                          : sectionAnalysis
+                          ? "Re-Analyze"
+                          : "Analyze"}
+                      </span>
+                    </button>
+                  )}
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-xs text-[#2B1810] group-hover:text-[#7A0F1F] transition truncate">
-                                {entry.title || "Untitled Entry"}
-                              </span>
-                              {entry.subtitle && (
-                                <span className="text-[11px] text-stone-500 font-normal truncate">
-                                  &bull; {entry.subtitle}
-                                </span>
-                              )}
-                            </div>
+                  {/* Visibility toggle */}
+                  <button
+                    type="button"
+                    onClick={() => toggleVisibility(sec.id)}
+                    className="p-1.5 rounded-lg text-secondary-text hover:bg-surface-muted transition-colors"
+                    title={sec.visible ? "Hide from resume" : "Show on resume"}
+                  >
+                    {sec.visible ? <Eye size={14} /> : <EyeOff size={14} className="text-muted-text" />}
+                  </button>
 
-                            {/* Metadata Subline (Dates, Location, Tags) */}
-                            <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[10px] text-stone-500">
-                              {(entry.startDate || entry.endDate || entry.isCurrent) && (
-                                <span className="flex items-center gap-1">
-                                  <Calendar size={10} />
-                                  <span>
-                                    {entry.startDate || ""}
-                                    {entry.endDate
-                                      ? ` &ndash; ${entry.endDate}`
-                                      : entry.isCurrent
-                                        ? " &ndash; Present"
-                                        : ""}
-                                  </span>
-                                </span>
-                              )}
-                              {entry.location && (
-                                <span className="flex items-center gap-1">
-                                  <MapPin size={10} />
-                                  <span>{entry.location}</span>
-                                </span>
-                              )}
-                              {entry.tags && entry.tags.length > 0 && (
-                                <span className="rounded bg-stone-100 px-1.5 py-0.2 text-[9px] text-stone-600">
-                                  {entry.tags.slice(0, 3).join(", ")}
-                                  {entry.tags.length > 3 ? "..." : ""}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                  {/* Keyboard Move alternatives */}
+                  <button
+                    type="button"
+                    disabled={idx === 0}
+                    onClick={() => moveSection(idx, "up")}
+                    className="p-1.5 rounded-lg text-secondary-text hover:bg-surface-muted disabled:opacity-25 transition-colors"
+                    title="Move section up"
+                  >
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={idx === data.sections.length - 1}
+                    onClick={() => moveSection(idx, "down")}
+                    className="p-1.5 rounded-lg text-secondary-text hover:bg-surface-muted disabled:opacity-25 transition-colors"
+                    title="Move section down"
+                  >
+                    <ChevronDown size={14} />
+                  </button>
 
-                          <div className="text-stone-400 group-hover:text-stone-700 shrink-0 pr-1">
-                            {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                          </div>
-                        </button>
+                  {/* Overflow menu */}
+                  <div className="relative" data-section-overflow>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenOverflowId((prev) => (prev === sec.id ? null : sec.id));
+                      }}
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        openOverflowId === sec.id
+                          ? "bg-primary text-white"
+                          : "text-secondary-text hover:bg-surface-muted"
+                      }`}
+                      title="More options (Rename, Duplicate, Move, Delete)"
+                      aria-label="Section options menu"
+                    >
+                      <MoreVertical size={14} />
+                    </button>
 
-                        {/* Reorder and Delete Controls */}
-                        <div className="flex items-center gap-1 shrink-0">
+                    {openOverflowId === sec.id && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-0 top-full mt-1.5 w-44 rounded-xl border border-border bg-surface p-1.5 shadow-xl z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-100"
+                      >
                           <button
                             type="button"
-                            disabled={entIdx === 0}
-                            onClick={() => moveEntry(entIdx, "up")}
-                            className="rounded p-1 text-stone-400 hover:text-stone-700 disabled:opacity-20"
-                            title="Move Entry Up"
-                          >
-                            <MoveUp size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={entIdx === currentSection.entries.length - 1}
-                            onClick={() => moveEntry(entIdx, "down")}
-                            className="rounded p-1 text-stone-400 hover:text-stone-700 disabled:opacity-20"
-                            title="Move Entry Down"
-                          >
-                            <MoveDown size={13} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updatedEntries = currentSection.entries.filter(
-                                (_, i) => i !== entIdx
-                              );
-                              const updatedSections = data.sections.map((s) =>
-                                s.id === currentSection.id
-                                  ? { ...s, entries: updatedEntries }
-                                  : s
-                              );
-                              onChangeData({ ...data, sections: updatedSections });
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveSectionId(sec.id);
+                              setEditingTitleId(sec.id);
+                              setOpenOverflowId(null);
                             }}
-                            className="rounded p-1 text-stone-400 hover:text-rose-700"
-                            title="Delete Entry"
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-foreground hover:bg-surface-muted text-left transition-colors"
+                          >
+                            <Edit2 size={13} className="text-secondary-text" />
+                            <span>Rename Section</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              duplicateSection(sec.id);
+                              setOpenOverflowId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-foreground hover:bg-surface-muted text-left transition-colors"
+                          >
+                            <Copy size={13} className="text-secondary-text" />
+                            <span>Duplicate Section</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveSection(idx, "up");
+                              setOpenOverflowId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-foreground hover:bg-surface-muted text-left disabled:opacity-30 transition-colors"
+                          >
+                            <ChevronUp size={13} className="text-secondary-text" />
+                            <span>Move Up</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={idx === data.sections.length - 1}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveSection(idx, "down");
+                              setOpenOverflowId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-foreground hover:bg-surface-muted text-left disabled:opacity-30 transition-colors"
+                          >
+                            <ChevronDown size={13} className="text-secondary-text" />
+                            <span>Move Down</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleVisibility(sec.id);
+                              setOpenOverflowId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-foreground hover:bg-surface-muted text-left transition-colors"
+                          >
+                            {sec.visible ? <EyeOff size={13} className="text-secondary-text" /> : <Eye size={13} className="text-secondary-text" />}
+                            <span>{sec.visible ? "Hide on Resume" : "Show on Resume"}</span>
+                          </button>
+                          <div className="my-1 border-t border-border" />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteSection(sec.id);
+                              setOpenOverflowId(null);
+                            }}
+                            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-red-700 hover:bg-red-50 text-left transition-colors"
                           >
                             <Trash2 size={13} />
+                            <span>Delete Section</span>
                           </button>
-                        </div>
-                      </div>
-
-                      {/* Expanded Full Editor Fields */}
-                      {isExpanded && (
-                        <div className="mt-3 pt-3 border-t border-[#EBDDD1] space-y-3">
-                          {/* Row 1: Title & Subtitle */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                              <label className="mb-1 block text-[11px] font-semibold text-[#352020]">
-                                Title / Role / Degree / Project
-                              </label>
-                              <input
-                                type="text"
-                                value={entry.title || ""}
-                                onChange={(e) => {
-                                  const updatedEntries = [...currentSection.entries];
-                                  updatedEntries[entIdx].title = e.target.value;
-                                  const updatedSections = data.sections.map((s) =>
-                                    s.id === currentSection.id
-                                      ? { ...s, entries: updatedEntries }
-                                      : s
-                                  );
-                                  onChangeData({ ...data, sections: updatedSections });
-                                }}
-                                placeholder="e.g. Senior Software Engineer or Healthcare Portal"
-                                className="w-full rounded-xl border border-[#EBDDD1] bg-white px-3 py-1.5 text-xs font-bold text-[#2B1810] focus:border-[#7A0F1F] focus:outline-hidden"
-                              />
-                            </div>
-                            <div>
-                              <label className="mb-1 block text-[11px] font-semibold text-[#352020]">
-                                Organization / Company / Institution
-                              </label>
-                              <input
-                                type="text"
-                                value={entry.subtitle || ""}
-                                onChange={(e) => {
-                                  const updatedEntries = [...currentSection.entries];
-                                  updatedEntries[entIdx].subtitle = e.target.value;
-                                  const updatedSections = data.sections.map((s) =>
-                                    s.id === currentSection.id
-                                      ? { ...s, entries: updatedEntries }
-                                      : s
-                                  );
-                                  onChangeData({ ...data, sections: updatedSections });
-                                }}
-                                placeholder="e.g. Google, Apollo Hospitals, RV College"
-                                className="w-full rounded-xl border border-[#EBDDD1] bg-white px-3 py-1.5 text-xs text-[#2B1810] focus:border-[#7A0F1F] focus:outline-hidden"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Row 2: Location & Dates */}
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div>
-                              <label className="mb-1 block text-[11px] font-semibold text-[#352020]">
-                                Location
-                              </label>
-                              <div className="relative">
-                                <MapPin
-                                  size={12}
-                                  className="absolute left-2.5 top-2.5 text-stone-400"
-                                />
-                                <input
-                                  type="text"
-                                  value={entry.location || ""}
-                                  onChange={(e) => {
-                                    const updatedEntries = [...currentSection.entries];
-                                    updatedEntries[entIdx].location = e.target.value;
-                                    const updatedSections = data.sections.map((s) =>
-                                      s.id === currentSection.id
-                                        ? { ...s, entries: updatedEntries }
-                                        : s
-                                    );
-                                    onChangeData({ ...data, sections: updatedSections });
-                                  }}
-                                  placeholder="e.g. Bengaluru, India (or Remote)"
-                                  className="w-full rounded-xl border border-[#EBDDD1] bg-white pl-7 pr-3 py-1.5 text-xs text-[#2B1810] focus:border-[#7A0F1F] focus:outline-hidden"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="mb-1 block text-[11px] font-semibold text-[#352020]">
-                                Start Date
-                              </label>
-                              <div className="relative">
-                                <Calendar
-                                  size={12}
-                                  className="absolute left-2.5 top-2.5 text-stone-400"
-                                />
-                                <input
-                                  type="text"
-                                  value={entry.startDate || ""}
-                                  onChange={(e) => {
-                                    const updatedEntries = [...currentSection.entries];
-                                    updatedEntries[entIdx].startDate = e.target.value;
-                                    const updatedSections = data.sections.map((s) =>
-                                      s.id === currentSection.id
-                                        ? { ...s, entries: updatedEntries }
-                                        : s
-                                    );
-                                    onChangeData({ ...data, sections: updatedSections });
-                                  }}
-                                  placeholder="e.g. 08/2021 or Aug 2021"
-                                  className="w-full rounded-xl border border-[#EBDDD1] bg-white pl-7 pr-3 py-1.5 text-xs text-[#2B1810] focus:border-[#7A0F1F] focus:outline-hidden"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className="flex items-center justify-between mb-1">
-                                <label className="text-[11px] font-semibold text-[#352020]">
-                                  End Date
-                                </label>
-                                <label className="flex items-center gap-1 text-[10px] text-stone-500 cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    checked={Boolean(entry.isCurrent)}
-                                    onChange={(e) => {
-                                      const updatedEntries = [...currentSection.entries];
-                                      updatedEntries[entIdx].isCurrent = e.target.checked;
-                                      if (e.target.checked) updatedEntries[entIdx].endDate = "";
-                                      const updatedSections = data.sections.map((s) =>
-                                        s.id === currentSection.id
-                                          ? { ...s, entries: updatedEntries }
-                                          : s
-                                      );
-                                      onChangeData({ ...data, sections: updatedSections });
-                                    }}
-                                    className="rounded text-[#7A0F1F]"
-                                  />
-                                  <span>Present</span>
-                                </label>
-                              </div>
-                              <div className="relative">
-                                <Calendar
-                                  size={12}
-                                  className="absolute left-2.5 top-2.5 text-stone-400"
-                                />
-                                <input
-                                  type="text"
-                                  disabled={Boolean(entry.isCurrent)}
-                                  value={entry.endDate || ""}
-                                  onChange={(e) => {
-                                    const updatedEntries = [...currentSection.entries];
-                                    updatedEntries[entIdx].endDate = e.target.value;
-                                    const updatedSections = data.sections.map((s) =>
-                                      s.id === currentSection.id
-                                        ? { ...s, entries: updatedEntries }
-                                        : s
-                                    );
-                                    onChangeData({ ...data, sections: updatedSections });
-                                  }}
-                                  placeholder={entry.isCurrent ? "Present" : "e.g. 06/2024 or Present"}
-                                  className="w-full rounded-xl border border-[#EBDDD1] bg-white pl-7 pr-3 py-1.5 text-xs text-[#2B1810] focus:border-[#7A0F1F] focus:outline-hidden disabled:bg-stone-50 disabled:text-stone-400"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Row 3: URL & Score */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                              <label className="mb-1 block text-[11px] font-semibold text-[#352020]">
-                                Project URL / Verification Link <span className="text-stone-400 font-normal">(Optional)</span>
-                              </label>
-                              <div className="relative">
-                                <ExternalLink
-                                  size={12}
-                                  className="absolute left-2.5 top-2.5 text-stone-400"
-                                />
-                                <input
-                                  type="text"
-                                  value={entry.url || ""}
-                                  onChange={(e) => {
-                                    const updatedEntries = [...currentSection.entries];
-                                    updatedEntries[entIdx].url = e.target.value;
-                                    const updatedSections = data.sections.map((s) =>
-                                      s.id === currentSection.id
-                                        ? { ...s, entries: updatedEntries }
-                                        : s
-                                    );
-                                    onChangeData({ ...data, sections: updatedSections });
-                                  }}
-                                  placeholder="e.g. https://github.com/username/project"
-                                  className="w-full rounded-xl border border-[#EBDDD1] bg-white pl-7 pr-3 py-1.5 text-xs text-[#2B1810] focus:border-[#7A0F1F] focus:outline-hidden"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="mb-1 block text-[11px] font-semibold text-[#352020]">
-                                Score / Grade / Honors <span className="text-stone-400 font-normal">(Optional)</span>
-                              </label>
-                              <input
-                                type="text"
-                                value={entry.score || ""}
-                                onChange={(e) => {
-                                  const updatedEntries = [...currentSection.entries];
-                                  updatedEntries[entIdx].score = e.target.value;
-                                  const updatedSections = data.sections.map((s) =>
-                                    s.id === currentSection.id
-                                      ? { ...s, entries: updatedEntries }
-                                      : s
-                                  );
-                                  onChangeData({ ...data, sections: updatedSections });
-                                }}
-                                placeholder="e.g. 8.85 CGPA or First Class with Distinction"
-                                className="w-full rounded-xl border border-[#EBDDD1] bg-white px-3 py-1.5 text-xs text-[#2B1810] focus:border-[#7A0F1F] focus:outline-hidden"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Row 4: Technologies / Tags */}
-                          <div>
-                            <label className="mb-1 block text-[11px] font-semibold text-[#352020]">
-                              Technologies &amp; Competencies
-                            </label>
-                            <div className="flex gap-2">
-                              <div className="relative flex-1">
-                                <Tag
-                                  size={12}
-                                  className="absolute left-2.5 top-2.5 text-stone-400"
-                                />
-                                <input
-                                  type="text"
-                                  value={tagInput}
-                                  onChange={(e) =>
-                                    setNewTagInputs((prev) => ({
-                                      ...prev,
-                                      [entry.id]: e.target.value,
-                                    }))
-                                  }
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" && tagInput.trim()) {
-                                      e.preventDefault();
-                                      addEntryTag(entIdx, tagInput.trim());
-                                      setNewTagInputs((prev) => ({ ...prev, [entry.id]: "" }));
-                                    }
-                                  }}
-                                  placeholder="Type tool or skill and press Enter (e.g. React, PostgreSQL, Docker)..."
-                                  className="w-full rounded-xl border border-[#EBDDD1] bg-white pl-7 pr-3 py-1.5 text-xs text-[#2B1810] focus:border-[#7A0F1F] focus:outline-hidden"
-                                />
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (!tagInput.trim()) return;
-                                  addEntryTag(entIdx, tagInput.trim());
-                                  setNewTagInputs((prev) => ({ ...prev, [entry.id]: "" }));
-                                }}
-                                className="rounded-xl border border-[#EBDDD1] bg-white px-3 py-1.5 text-xs font-semibold text-[#7A0F1F] hover:bg-[#FFF9ED]"
-                              >
-                                Add Tag
-                              </button>
-                            </div>
-
-                            {entry.tags && entry.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 pt-2">
-                                {entry.tags.map((t, tIdx) => (
-                                  <span
-                                    key={tIdx}
-                                    className="inline-flex items-center gap-1 rounded-md bg-stone-100 border border-stone-200 px-2 py-0.5 text-[11px] font-medium text-stone-700"
-                                  >
-                                    <span>{t}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => removeEntryTag(entIdx, tIdx)}
-                                      className="text-stone-400 hover:text-rose-700"
-                                    >
-                                      &times;
-                                    </button>
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Row 5: Overview Description */}
-                          <div>
-                            <label className="mb-1 block text-[11px] font-semibold text-[#352020]">
-                              Overview Description <span className="text-stone-400 font-normal">(Context or intro paragraph)</span>
-                            </label>
-                            <textarea
-                              rows={2}
-                              value={entry.text || ""}
-                              onChange={(e) => {
-                                const updatedEntries = [...currentSection.entries];
-                                updatedEntries[entIdx].text = e.target.value;
-                                const updatedSections = data.sections.map((s) =>
-                                  s.id === currentSection.id
-                                    ? { ...s, entries: updatedEntries }
-                                    : s
-                                );
-                                onChangeData({ ...data, sections: updatedSections });
-                              }}
-                              placeholder="Briefly state the goal, scope, and technical context..."
-                              className="w-full rounded-xl border border-[#EBDDD1] bg-white p-2.5 text-xs leading-relaxed text-[#2B1810] focus:border-[#7A0F1F] focus:outline-hidden resize-none"
-                            />
-                          </div>
-
-                          {/* Row 6: Bullet Deliverables & Drag-and-Drop */}
-                          <div className="space-y-2 pt-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-[#765F5D]">
-                                Bullet Deliverables ({entry.bullets.length}) &bull; Drag to reorder
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updatedEntries = [...currentSection.entries];
-                                  updatedEntries[entIdx].bullets.push({
-                                    id: createItemId("b"),
-                                    text: "Executed actionable procedure delivering verified outcome.",
-                                    provenance: "STUDENT_INPUT",
-                                    isApproved: true,
-                                  });
-                                  const updatedSections = data.sections.map((s) =>
-                                    s.id === currentSection.id
-                                      ? { ...s, entries: updatedEntries }
-                                      : s
-                                  );
-                                  onChangeData({ ...data, sections: updatedSections });
-                                }}
-                                className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#7A0F1F] hover:underline"
-                              >
-                                <Plus size={11} />
-                                <span>Add Bullet</span>
-                              </button>
-                            </div>
-
-                            <div className="space-y-2">
-                              {entry.bullets.map((bullet, bIdx) => {
-                                const bKey = `${entIdx}:${bIdx}`;
-                                const isBDragging = draggedBulletKey === bKey;
-                                const isBOver = dragOverBulletKey === bKey;
-
-                                return (
-                                  <div
-                                    key={bullet.id}
-                                    draggable
-                                    onDragStart={(e) => handleBulletDragStart(e, entIdx, bIdx)}
-                                    onDragOver={(e) => handleBulletDragOver(e, entIdx, bIdx)}
-                                    onDrop={(e) => handleBulletDrop(e, entIdx, bIdx)}
-                                    className={`rounded-xl border transition p-2.5 space-y-2 ${
-                                      isBDragging
-                                        ? "opacity-40 border-[#7A0F1F] bg-[#FFF9ED]"
-                                        : isBOver
-                                          ? "border-2 border-[#7A0F1F] bg-[#FFF9ED]/60"
-                                          : "border-[#EBDDD1] bg-white"
-                                    }`}
-                                  >
-                                    <div className="flex items-start gap-2">
-                                      <GripVertical
-                                        size={13}
-                                        className="text-stone-300 hover:text-stone-600 shrink-0 cursor-grab mt-1"
-                                      />
-                                      <span className="text-[#7A0F1F] font-bold shrink-0 mt-0.5">•</span>
-                                      <textarea
-                                        rows={2}
-                                        value={bullet.text}
-                                        onChange={(e) => {
-                                          const updatedEntries = [...currentSection.entries];
-                                          updatedEntries[entIdx].bullets[bIdx].text = e.target.value;
-                                          const updatedSections = data.sections.map((s) =>
-                                            s.id === currentSection.id
-                                              ? { ...s, entries: updatedEntries }
-                                              : s
-                                          );
-                                          onChangeData({ ...data, sections: updatedSections });
-                                        }}
-                                        className="w-full text-xs text-[#2B1810] focus:outline-hidden leading-relaxed resize-none"
-                                      />
-
-                                      {/* Move Up/Down & Delete */}
-                                      <div className="flex items-center gap-1 shrink-0">
-                                        <button
-                                          type="button"
-                                          disabled={bIdx === 0}
-                                          onClick={() => moveBullet(entIdx, bIdx, "up")}
-                                          className="text-stone-300 hover:text-stone-600 disabled:opacity-20 p-0.5"
-                                          title="Move bullet up"
-                                        >
-                                          <MoveUp size={11} />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          disabled={bIdx === entry.bullets.length - 1}
-                                          onClick={() => moveBullet(entIdx, bIdx, "down")}
-                                          className="text-stone-300 hover:text-stone-600 disabled:opacity-20 p-0.5"
-                                          title="Move bullet down"
-                                        >
-                                          <MoveDown size={11} />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            const updatedEntries = [...currentSection.entries];
-                                            updatedEntries[entIdx].bullets = updatedEntries[
-                                              entIdx
-                                            ].bullets.filter((_, i) => i !== bIdx);
-                                            const updatedSections = data.sections.map((s) =>
-                                              s.id === currentSection.id
-                                                ? { ...s, entries: updatedEntries }
-                                                : s
-                                            );
-                                            onChangeData({ ...data, sections: updatedSections });
-                                          }}
-                                          className="text-stone-300 hover:text-rose-700 p-0.5"
-                                          title="Delete bullet"
-                                        >
-                                          <Trash2 size={11} />
-                                        </button>
-                                      </div>
-                                    </div>
-
-                                    {/* Inline AI Improvement Toolbar */}
-                                    <div className="flex flex-wrap items-center gap-1.5 border-t border-stone-100 pt-1.5 text-[10px]">
-                                      <span className="font-bold text-[#765F5D] flex items-center gap-1">
-                                        <Wand2 size={10} className="text-[#F6B51C]" />
-                                        <span>Improve with AI:</span>
-                                      </span>
-
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          triggerBulletImprovement(
-                                            entIdx,
-                                            bIdx,
-                                            bullet.text,
-                                            "strengthen"
-                                          )
-                                        }
-                                        className="rounded bg-[#FDF7F5] px-1.5 py-0.5 text-[#7A0F1F] font-semibold border border-[#EBDDD1] hover:bg-[#FFF0D4] transition"
-                                      >
-                                        Strengthen Impact
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          triggerBulletImprovement(
-                                            entIdx,
-                                            bIdx,
-                                            bullet.text,
-                                            "make_specific"
-                                          )
-                                        }
-                                        className="rounded bg-[#FDF7F5] px-1.5 py-0.5 text-[#7A0F1F] font-semibold border border-[#EBDDD1] hover:bg-[#FFF0D4] transition"
-                                      >
-                                        Make Specific
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          triggerBulletImprovement(
-                                            entIdx,
-                                            bIdx,
-                                            bullet.text,
-                                            "shorten"
-                                          )
-                                        }
-                                        className="rounded bg-[#FDF7F5] px-1.5 py-0.5 text-[#7A0F1F] font-semibold border border-[#EBDDD1] hover:bg-[#FFF0D4] transition"
-                                      >
-                                        Shorten
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          triggerBulletImprovement(
-                                            entIdx,
-                                            bIdx,
-                                            bullet.text,
-                                            "fix_grammar"
-                                          )
-                                        }
-                                        className="rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-900 font-semibold border border-emerald-200 hover:bg-emerald-100 transition"
-                                      >
-                                        Grammar Check
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
                         </div>
                       )}
                     </div>
+                  </div>
+                </div>
+
+              {/* ── Focused Section Editing Body ── */}
+              {isFocused && (
+                <div className="px-5 py-5 sm:px-6 space-y-4 bg-surface border-t border-border/60 animate-in fade-in duration-150">
+                  {/* Section AI Optimization Bar */}
+                  <div className="flex flex-col gap-2.5 p-3.5 rounded-xl bg-gradient-to-r from-blue-50/90 via-slate-50 to-indigo-50/50 border border-blue-200/80 shadow-2xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white shrink-0 shadow-2xs">
+                          <Sparkles size={13} />
+                        </div>
+                        <span className="text-xs font-bold text-slate-900 truncate">
+                          AI Section Optimizer
+                        </span>
+                      </div>
+                      {sectionAnalysis && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">
+                          Audited
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-slate-500 leading-snug">
+                      {sectionAnalysis
+                        ? `${sectionAnalysis.suggestions.length} suggestions • ${sectionAnalysis.issues.length} potential issues found`
+                        : `Audit action verbs, quantify metrics, and optimize ATS match for ${sec.customTitle}.`}
+                    </p>
+
+                    <div className="flex items-center gap-2 pt-1 border-t border-blue-100/80">
+                      {sectionAnalysis && sectionAnalysis.suggestions.length > 0 && onOpenAiReview && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenAiReview(sec.id)}
+                          className="flex-1 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-700 bg-white border border-blue-200 hover:bg-blue-50 transition shadow-2xs"
+                          title="Open AI Review Drawer with full side-by-side comparisons"
+                        >
+                          <span>View Fixes ({sectionAnalysis.suggestions.length})</span>
+                        </button>
+                      )}
+                      {onAnalyzeSection && (
+                        <button
+                          type="button"
+                          disabled={analyzingSectionId === sec.id}
+                          onClick={() => onAnalyzeSection(sec.id)}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition shadow-xs disabled:opacity-50"
+                        >
+                          {analyzingSectionId === sec.id ? (
+                            <>
+                              <Loader2 size={13} className="animate-spin" />
+                              <span>Analyzing…</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles size={13} />
+                              <span>{sectionAnalysis ? "Re-Analyze Section" : "Analyze Section"}</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Quick Inline Suggestions if section analysis exists */}
+                  {sectionAnalysis && sectionAnalysis.suggestions.length > 0 && (
+                    <div className="space-y-2 rounded-xl border border-blue-100 bg-blue-50/30 p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider">
+                          Suggested Improvements ({sectionAnalysis.suggestions.length})
+                        </span>
+                        {onOpenAiReview && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenAiReview(sec.id)}
+                            className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-1"
+                          >
+                            <span>Open in AI Drawer</span>
+                            <ArrowRight size={11} />
+                          </button>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        {sectionAnalysis.suggestions.slice(0, 3).map((sug) => (
+                          <div
+                            key={sug.id}
+                            className="p-2.5 rounded-lg border border-slate-200 bg-white text-xs space-y-1.5 shadow-2xs"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-[11px] text-emerald-950 font-medium leading-relaxed">
+                                <span className="font-bold text-emerald-800">Rewrite: </span>
+                                {sug.improved}
+                              </p>
+                              {onAcceptSuggestion && (
+                                <button
+                                  type="button"
+                                  onClick={() => onAcceptSuggestion(sec.id, sug)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition shrink-0"
+                                >
+                                  <Check size={11} />
+                                  <span>Accept</span>
+                                </button>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-slate-500 italic">
+                              Why: {sug.reason}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section Display Mode (Bullets vs Paragraph) */}
+                  {sec.type !== "skills" && sec.type !== "summary" && (
+                    <div className="flex items-center justify-between border-b border-border pb-3">
+                      <span className="text-xs font-bold text-secondary-text">Formatting Style:</span>
+                      <div className="flex items-center gap-1 rounded-xl border border-border bg-surface-muted p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setSectionDisplayMode("bullets")}
+                          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                            (sec.layoutOptions?.displayMode || "bullets") === "bullets"
+                              ? "bg-primary text-white shadow-xs"
+                              : "text-secondary-text hover:text-foreground"
+                          }`}
+                        >
+                          <List size={12} />
+                          <span>Bullets</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSectionDisplayMode("paragraph")}
+                          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
+                            sec.layoutOptions?.displayMode === "paragraph"
+                              ? "bg-primary text-white shadow-xs"
+                              : "text-secondary-text hover:text-foreground"
+                          }`}
+                        >
+                          <AlignLeft size={12} />
+                          <span>Paragraph</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {sec.type === "summary" && (
+                    <div className="space-y-3">
+                      <label className="block text-xs font-semibold text-secondary-text">
+                        Professional Summary / Career Pitch
+                      </label>
+                      <textarea
+                        rows={6}
+                        value={sec.entries[0]?.text || ""}
+                        onChange={(e) => {
+                          const updatedEntries = [
+                            {
+                              id: sec.entries[0]?.id || createItemId("ent_sum"),
+                              title: "Summary",
+                              text: e.target.value,
+                              bullets: [],
+                            },
+                          ];
+                          const updatedSections = data.sections.map((s) =>
+                            s.id === sec.id ? { ...s, entries: updatedEntries } : s
+                          );
+                          onChangeData({ ...data, sections: updatedSections });
+                        }}
+                        placeholder="Highlight 2-3 key competencies, verified career focus, and demonstrable impact..."
+                        className="w-full rounded-xl border border-border bg-surface p-4 text-sm leading-relaxed text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                      />
+                    </div>
+                  )}
+
+                  {/* 2. Skills Section Editor */}
+                  {sec.type === "skills" && (
+                    <div className="space-y-3">
+                      <label className="block text-xs font-bold text-secondary-text">
+                        Skills &amp; Competencies:
+                      </label>
+
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={newSkillInput}
+                          onChange={(e) => setNewSkillInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && newSkillInput.trim()) {
+                              e.preventDefault();
+                              const currentTags = sec.entries[0]?.tags || [];
+                              const updatedTags = [...currentTags, newSkillInput.trim()];
+                              const updatedEntries = [
+                                {
+                                  id: sec.entries[0]?.id || createItemId("ent_skills"),
+                                  title: "Competencies",
+                                  tags: updatedTags,
+                                  bullets: [],
+                                },
+                              ];
+                              const updatedSections = data.sections.map((s) =>
+                                s.id === sec.id ? { ...s, entries: updatedEntries } : s
+                              );
+                              onChangeData({ ...data, sections: updatedSections });
+                              setNewSkillInput("");
+                            }
+                          }}
+                          placeholder="Type skill name and press Enter (e.g. Next.js, Financial Modeling, ACLS)..."
+                          className="flex-1 h-10 rounded-xl border border-border bg-surface px-3.5 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newSkillInput.trim()) return;
+                            const currentTags = sec.entries[0]?.tags || [];
+                            const updatedTags = [...currentTags, newSkillInput.trim()];
+                            const updatedEntries = [
+                              {
+                                id: sec.entries[0]?.id || createItemId("ent_skills"),
+                                title: "Competencies",
+                                tags: updatedTags,
+                                bullets: [],
+                              },
+                            ];
+                            const updatedSections = data.sections.map((s) =>
+                              s.id === sec.id ? { ...s, entries: updatedEntries } : s
+                            );
+                            onChangeData({ ...data, sections: updatedSections });
+                            setNewSkillInput("");
+                          }}
+                          className="h-10 px-4 rounded-xl bg-primary text-xs font-bold text-white hover:bg-primary-dark transition-colors shadow-xs"
+                        >
+                          Add Skill
+                        </button>
+                      </div>
+
+                      {/* Tags Cloud */}
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {(sec.entries[0]?.tags || []).map((skill, sIdx) => (
+                          <span
+                            key={sIdx}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-muted px-2.5 py-1 text-xs text-foreground"
+                          >
+                            <span>{skill}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const currentTags = sec.entries[0]?.tags || [];
+                                const updatedTags = currentTags.filter((_, i) => i !== sIdx);
+                                const updatedEntries = [{ ...sec.entries[0], tags: updatedTags }];
+                                const updatedSections = data.sections.map((s) =>
+                                  s.id === sec.id ? { ...s, entries: updatedEntries } : s
+                                );
+                                onChangeData({ ...data, sections: updatedSections });
+                              }}
+                              className="text-muted-text hover:text-red-700 font-bold ml-0.5"
+                            >
+                              &times;
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. Standard Entry List (Collapsible Entry Cards) */}
+                  {sec.type !== "summary" && sec.type !== "skills" && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-secondary-text uppercase tracking-wider">
+                          Entries ({sec.entries.length})
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newEntry: ResumeEntry = {
+                              id: createItemId(`ent_${sec.type}`),
+                              title: "New Item",
+                              subtitle: "Organization / Institution",
+                              startDate: "",
+                              endDate: "",
+                              isCurrent: false,
+                              location: "",
+                              url: "",
+                              score: "",
+                              tags: [],
+                              bullets: [
+                                {
+                                  id: createItemId("b"),
+                                  text: "Documented key deliverable, procedure, or measurable impact.",
+                                  provenance: "STUDENT_INPUT",
+                                  isApproved: true,
+                                },
+                              ],
+                            };
+                            const updatedEntries = [...sec.entries, newEntry];
+                            const updatedSections = data.sections.map((s) =>
+                              s.id === sec.id ? { ...s, entries: updatedEntries } : s
+                            );
+                            onChangeData({ ...data, sections: updatedSections });
+                            setExpandedEntryId(newEntry.id);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-xl border border-primary/30 bg-[#FFF8F0] px-3 py-1.5 text-xs font-bold text-primary hover:bg-[#FBE4E4]/40 transition"
+                        >
+                          <Plus size={13} />
+                          <span>Add {sec.customTitle.replace(/s$/, "") || "Entry"}</span>
+                        </button>
+                      </div>
+
+                      {/* Entries Accordion Cards */}
+                      <div className="space-y-3">
+                        {sec.entries.map((entry, entIdx) => {
+                          const isExpanded =
+                            expandedEntryId === entry.id ||
+                            (expandedEntryId === null && entIdx === 0);
+                          const tagInput = newTagInputs[entry.id] || "";
+                          const isDragging = draggedEntryIdx === entIdx;
+                          const isOver = dragOverEntryIdx === entIdx;
+
+                          return (
+                            <div
+                              key={entry.id}
+                              draggable
+                              onDragStart={(e) => handleEntryDragStart(e, entIdx)}
+                              onDragOver={(e) => handleEntryDragOver(e, entIdx)}
+                              onDrop={(e) => handleEntryDrop(e, entIdx)}
+                              className={`rounded-xl border transition-all duration-200 overflow-hidden ${
+                                isDragging
+                                  ? "opacity-40 border-primary bg-surface-muted"
+                                  : isOver
+                                    ? "border-2 border-primary bg-[#FFF8F0]"
+                                    : isExpanded
+                                      ? "border-border-strong bg-surface shadow-sm"
+                                      : "border-border bg-surface-muted/50 hover:border-border-strong"
+                              }`}
+                            >
+                              {/* Entry Collapsed Header Bar (44-48px) */}
+                              <div
+                                onClick={() => setExpandedEntryId(isExpanded ? "" : entry.id)}
+                                className="flex items-center justify-between gap-2.5 px-4 py-3.5 cursor-pointer select-none"
+                              >
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <GripVertical size={13} className="text-muted-text hover:text-foreground shrink-0 cursor-grab" />
+                                  <div className="flex items-baseline gap-2 min-w-0 truncate">
+                                    <span className="font-semibold text-[13px] text-foreground truncate">
+                                      {entry.title || "Untitled Entry"}
+                                    </span>
+                                    {entry.subtitle && (
+                                      <span className="text-xs text-secondary-text truncate">
+                                        &bull; {entry.subtitle}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {(entry.startDate || entry.endDate || entry.isCurrent) && (
+                                    <span className="text-[10px] text-muted-text font-semibold hidden sm:inline">
+                                      {entry.startDate} {entry.endDate ? `- ${entry.endDate}` : entry.isCurrent ? "- Present" : ""}
+                                    </span>
+                                  )}
+                                  <ChevronDown size={14} className={`text-muted-text transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                                </div>
+                              </div>
+
+                              {/* Entry Expanded Body */}
+                              {isExpanded && (
+                                <div className="px-5 py-5 border-t border-border space-y-5 bg-surface">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                      <label className="block text-xs font-semibold text-secondary-text mb-2">
+                                        Title / Role / Degree
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={entry.title || ""}
+                                        onChange={(e) => {
+                                          const updatedEntries = [...sec.entries];
+                                          updatedEntries[entIdx] = { ...entry, title: e.target.value };
+                                          const updatedSections = data.sections.map((s) =>
+                                            s.id === sec.id ? { ...s, entries: updatedEntries } : s
+                                          );
+                                          onChangeData({ ...data, sections: updatedSections });
+                                        }}
+                                        className="w-full h-10 rounded-lg border border-border bg-surface px-3.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label className="block text-xs font-semibold text-secondary-text mb-2">
+                                        Organization / Institution
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={entry.subtitle || ""}
+                                        onChange={(e) => {
+                                          const updatedEntries = [...sec.entries];
+                                          updatedEntries[entIdx] = { ...entry, subtitle: e.target.value };
+                                          const updatedSections = data.sections.map((s) =>
+                                            s.id === sec.id ? { ...s, entries: updatedEntries } : s
+                                          );
+                                          onChangeData({ ...data, sections: updatedSections });
+                                        }}
+                                        className="w-full h-10 rounded-lg border border-border bg-surface px-3.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div>
+                                      <label className="block text-xs font-semibold text-secondary-text mb-2">
+                                        Start Date
+                                      </label>
+                                      <input
+                                        type="text"
+                                        placeholder="e.g. 2022-06"
+                                        value={entry.startDate || ""}
+                                        onChange={(e) => {
+                                          const updatedEntries = [...sec.entries];
+                                          updatedEntries[entIdx] = { ...entry, startDate: e.target.value };
+                                          const updatedSections = data.sections.map((s) =>
+                                            s.id === sec.id ? { ...s, entries: updatedEntries } : s
+                                          );
+                                          onChangeData({ ...data, sections: updatedSections });
+                                        }}
+                                        className="w-full h-10 rounded-lg border border-border bg-surface px-3.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label className="block text-xs font-semibold text-secondary-text mb-2">
+                                        End Date
+                                      </label>
+                                      <input
+                                        type="text"
+                                        placeholder="e.g. Present"
+                                        value={entry.endDate || ""}
+                                        disabled={entry.isCurrent}
+                                        onChange={(e) => {
+                                          const updatedEntries = [...sec.entries];
+                                          updatedEntries[entIdx] = { ...entry, endDate: e.target.value };
+                                          const updatedSections = data.sections.map((s) =>
+                                            s.id === sec.id ? { ...s, entries: updatedEntries } : s
+                                          );
+                                          onChangeData({ ...data, sections: updatedSections });
+                                        }}
+                                        className="w-full h-10 rounded-lg border border-border bg-surface px-3.5 text-sm text-foreground disabled:bg-surface-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                      />
+                                    </div>
+
+                                    <div className="flex items-center gap-2.5 pt-7">
+                                      <input
+                                        type="checkbox"
+                                        id={`current_${entry.id}`}
+                                        checked={entry.isCurrent || false}
+                                        onChange={(e) => {
+                                          const updatedEntries = [...sec.entries];
+                                          updatedEntries[entIdx] = { ...entry, isCurrent: e.target.checked };
+                                          const updatedSections = data.sections.map((s) =>
+                                            s.id === sec.id ? { ...s, entries: updatedEntries } : s
+                                          );
+                                          onChangeData({ ...data, sections: updatedSections });
+                                        }}
+                                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                                      />
+                                      <label htmlFor={`current_${entry.id}`} className="text-sm font-medium text-secondary-text cursor-pointer">
+                                        Currently active
+                                      </label>
+                                    </div>
+                                  </div>
+
+                                  {/* Bullets List */}
+                                  <div className="space-y-3 pt-1">
+                                    <div className="flex items-center justify-between">
+                                      <label className="text-xs font-semibold text-secondary-text uppercase tracking-wider">
+                                        Bullet Points &amp; Outcomes
+                                      </label>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const updatedEntries = [...sec.entries];
+                                          const newBullet = {
+                                            id: createItemId("b"),
+                                            text: "Documented verifiable contribution or quantifiable metric.",
+                                            provenance: "STUDENT_INPUT" as const,
+                                            isApproved: true,
+                                          };
+                                          updatedEntries[entIdx].bullets.push(newBullet);
+                                          const updatedSections = data.sections.map((s) =>
+                                            s.id === sec.id ? { ...s, entries: updatedEntries } : s
+                                          );
+                                          onChangeData({ ...data, sections: updatedSections });
+                                        }}
+                                        className="text-xs font-semibold text-primary hover:text-primary-dark"
+                                      >
+                                        + Add Bullet
+                                      </button>
+                                    </div>
+
+                                    <div className="space-y-2.5">
+                                      {entry.bullets.map((b, bIdx) => (
+                                        <div
+                                          key={b.id}
+                                          draggable
+                                          onDragStart={(e) => handleBulletDragStart(e, entIdx, bIdx)}
+                                          onDragOver={(e) => handleBulletDragOver(e, entIdx, bIdx)}
+                                          onDrop={(e) => handleBulletDrop(e, entIdx, bIdx)}
+                                          className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-surface-muted/40"
+                                        >
+                                          <GripVertical size={13} className="text-muted-text mt-2.5 cursor-grab shrink-0" />
+                                          <textarea
+                                            rows={2}
+                                            value={b.text}
+                                            onChange={(e) => {
+                                              const updatedEntries = [...sec.entries];
+                                              updatedEntries[entIdx].bullets[bIdx] = { ...b, text: e.target.value };
+                                              const updatedSections = data.sections.map((s) =>
+                                                s.id === sec.id ? { ...s, entries: updatedEntries } : s
+                                              );
+                                              onChangeData({ ...data, sections: updatedSections });
+                                            }}
+                                            className="flex-1 rounded-lg border border-border bg-surface p-2.5 text-xs text-foreground leading-relaxed focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                                          />
+
+                                          <div className="flex flex-col gap-1 shrink-0">
+                                            {/* AI Improve Dropdown / Button */}
+                                            <button
+                                              type="button"
+                                              onClick={() => triggerBulletImprovement(entIdx, bIdx, b.text, "strengthen")}
+                                              className="p-1 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                              title="AI: Strengthen with metric verbs"
+                                            >
+                                              <Wand2 size={12} className="text-blue-600" />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                const updatedEntries = [...sec.entries];
+                                                updatedEntries[entIdx].bullets.splice(bIdx, 1);
+                                                const updatedSections = data.sections.map((s) =>
+                                                  s.id === sec.id ? { ...s, entries: updatedEntries } : s
+                                                );
+                                                onChangeData({ ...data, sections: updatedSections });
+                                              }}
+                                              className="p-1 rounded-lg text-muted-text hover:text-red-700"
+                                              title="Delete bullet"
+                                            >
+                                              <Trash2 size={12} />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  {/* Entry Delete Button */}
+                                  <div className="flex justify-end pt-2 border-t border-border">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (!confirm("Delete this entry?")) return;
+                                        const updatedEntries = sec.entries.filter((_, i) => i !== entIdx);
+                                        const updatedSections = data.sections.map((s) =>
+                                          s.id === sec.id ? { ...s, entries: updatedEntries } : s
+                                        );
+                                        onChangeData({ ...data, sections: updatedSections });
+                                      }}
+                                      className="text-xs font-semibold text-red-700 hover:text-red-900 flex items-center gap-1"
+                                    >
+                                      <Trash2 size={12} />
+                                      <span>Delete Entry</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Single Clear "+ Add Section" Menu Button ── */}
+      <div ref={addMenuRef} className="relative pt-2">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setAddSectionMenuOpen(!addSectionMenuOpen);
+          }}
+          className="w-full flex items-center justify-center gap-2 min-h-[48px] rounded-2xl border-2 border-dashed border-primary/30 bg-[#FFF8F0] hover:bg-[#FBE4E4]/40 text-primary font-bold text-xs transition-colors shadow-xs"
+        >
+          <Plus size={16} />
+          <span>Add Section</span>
+          <ChevronDown size={14} className={`transition-transform duration-200 ${addSectionMenuOpen ? "rotate-180" : ""}`} />
+        </button>
+
+        {addSectionMenuOpen && (
+          <div className="absolute z-30 left-0 right-0 top-full mt-2 p-3 bg-surface rounded-2xl border border-border shadow-dropdown space-y-3">
+            {/* 1. Recommended Sections from Domain */}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-text mb-1.5 px-1">
+                Recommended for {framework.name}
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {framework.sections.map((rec) => {
+                  const alreadyHas = data.sections.some((s) => s.customTitle === rec.label);
+                  if (alreadyHas) return null;
+                  return (
+                    <button
+                      key={rec.key}
+                      type="button"
+                      onClick={() => addCustomSection("custom", rec.label, "bullets")}
+                      className="flex items-center gap-1.5 p-2 rounded-xl border border-border bg-surface-muted/50 hover:bg-[#FFF8F0] hover:border-primary/40 text-left text-xs font-medium text-foreground transition"
+                    >
+                      <Plus size={12} className="text-primary" />
+                      <span className="truncate">{rec.label}</span>
+                    </button>
                   );
                 })}
               </div>
             </div>
-          )}
-        </div>
-      )}
 
-      {/* ── Bullet AI Side-by-Side Diff Box (Active Improvement) ─────── */}
-      {activeBulletDiff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl border border-[#EBDDD1] space-y-4 animate-in fade-in zoom-in duration-150">
-            <div className="flex items-center justify-between border-b border-[#EBDDD1] pb-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#7A0F1F] text-[#F2B63D]">
-                  <Sparkles size={14} />
-                </div>
-                <div>
-                  <h4 className="font-heading text-sm font-bold text-[#2B1810]">
-                    AI Bullet Point Optimizer
-                  </h4>
-                  <p className="text-[11px] text-[#765F5D]">
-                    Review the side-by-side phrasing changes. You can edit before accepting.
-                  </p>
-                </div>
+            {/* 2. Common Professional Sections */}
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-text mb-1.5 px-1">
+                Standard Sections
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => addCustomSection("certifications", "Certifications & Licensures", "bullets")}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-border bg-surface-muted/50 hover:bg-[#FFF8F0] hover:border-primary/40 text-left text-xs font-medium text-foreground transition"
+                >
+                  <Award size={13} className="text-primary" />
+                  <span className="truncate">Certifications</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addCustomSection("publications", "Publications & Research", "bullets")}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-border bg-surface-muted/50 hover:bg-[#FFF8F0] hover:border-primary/40 text-left text-xs font-medium text-foreground transition"
+                >
+                  <BookOpen size={13} className="text-primary" />
+                  <span className="truncate">Publications</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addCustomSection("volunteer", "Leadership & Activities", "bullets")}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-border bg-surface-muted/50 hover:bg-[#FFF8F0] hover:border-primary/40 text-left text-xs font-medium text-foreground transition"
+                >
+                  <Briefcase size={13} className="text-primary" />
+                  <span className="truncate">Leadership</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addCustomSection("languages", "Languages", "tags")}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-border bg-surface-muted/50 hover:bg-[#FFF8F0] hover:border-primary/40 text-left text-xs font-medium text-foreground transition"
+                >
+                  <Globe size={13} className="text-primary" />
+                  <span className="truncate">Languages</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addCustomSection("achievements", "Honors & Awards", "bullets")}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-border bg-surface-muted/50 hover:bg-[#FFF8F0] hover:border-primary/40 text-left text-xs font-medium text-foreground transition"
+                >
+                  <Sparkles size={13} className="text-primary" />
+                  <span className="truncate">Honors &amp; Awards</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addCustomSection("custom", "Custom Section", "bullets")}
+                  className="flex items-center gap-1.5 p-2 rounded-xl border border-primary bg-primary text-white hover:bg-primary-dark text-left text-xs font-bold transition shadow-xs"
+                >
+                  <Plus size={13} />
+                  <span className="truncate">Freeform Section</span>
+                </button>
               </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Active Bullet Diff Modal (Inline AI Comparison) ── */}
+      {activeBulletDiff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-xl rounded-2xl border border-border bg-surface p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h4 className="font-heading text-sm font-bold text-foreground flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-blue-600" />
+                AI Bullet Improvement ({activeBulletDiff.action.replace("_", " ")})
+              </h4>
               <button
                 type="button"
                 onClick={() => setActiveBulletDiff(null)}
-                className="text-stone-400 hover:text-stone-700"
+                className="text-muted-text hover:text-foreground"
               >
                 <X size={16} />
               </button>
             </div>
 
-            {/* Ethics Protection Banner */}
-            <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-900">
-              <ShieldCheck size={14} className="text-emerald-700 shrink-0" />
-              <span>
-                <strong>Truth Guarantee:</strong> No fake numbers, employers, or skills are generated.
-                Provenance tracked as <code>AI_SUGGESTION</code>.
-              </span>
-            </div>
-
-            {/* Side-by-Side Diff Layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              {/* Original */}
-              <div className="space-y-1.5">
-                <span className="font-bold text-[10px] text-stone-500 uppercase tracking-wider block">
-                  Original Phrasing:
-                </span>
-                <div className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-stone-700 leading-relaxed min-h-[90px]">
+            <div className="space-y-3">
+              <div>
+                <p className="text-[11px] font-bold text-secondary-text mb-1">Original Phrasing:</p>
+                <div className="p-3 rounded-xl bg-surface-muted text-xs text-secondary-text border border-border leading-relaxed">
                   {activeBulletDiff.originalText}
                 </div>
               </div>
 
-              {/* Improved */}
-              <div className="space-y-1.5">
-                <span className="font-bold text-[10px] text-emerald-800 uppercase tracking-wider flex items-center justify-between">
-                  <span>Improved Draft (Editable):</span>
-                  {activeBulletDiff.loading && (
-                    <span className="text-amber-600 animate-pulse">Generating...</span>
+              <div>
+                <p className="text-[11px] font-bold text-primary mb-1">Improved Version:</p>
+                <div className="p-3 rounded-xl bg-blue-50 text-xs text-foreground font-medium border border-blue-200 leading-relaxed min-h-[60px] flex items-center">
+                  {activeBulletDiff.loading ? (
+                    <span className="text-muted-text italic flex items-center gap-2">
+                      <Sparkles size={14} className="animate-spin text-primary" />
+                      Analyzing with action verbs and impact metrics...
+                    </span>
+                  ) : (
+                    activeBulletDiff.improvedText
                   )}
-                </span>
-                <textarea
-                  rows={4}
-                  value={activeBulletDiff.improvedText}
-                  disabled={activeBulletDiff.loading}
-                  onChange={(e) =>
-                    setActiveBulletDiff((prev) =>
-                      prev ? { ...prev, improvedText: e.target.value } : null
-                    )
-                  }
-                  className="w-full rounded-xl border border-emerald-300 bg-emerald-50/50 p-3 text-xs text-stone-900 font-medium leading-relaxed focus:border-emerald-600 focus:outline-hidden resize-none min-h-[90px]"
-                />
+                </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center justify-between border-t border-[#EBDDD1] pt-3">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
               <button
                 type="button"
                 onClick={() => setActiveBulletDiff(null)}
-                className="rounded-xl border border-[#EBDDD1] bg-white px-3.5 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-50 transition"
+                className="px-4 py-2 rounded-xl border border-border text-xs font-semibold text-secondary-text hover:bg-surface-muted transition"
               >
                 Keep Original
               </button>
-
               <button
                 type="button"
-                disabled={activeBulletDiff.loading}
+                disabled={activeBulletDiff.loading || !activeBulletDiff.improvedText}
                 onClick={acceptBulletDiff}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#7A0F1F] px-4 py-1.5 text-xs font-bold text-white hover:bg-[#600C18] disabled:opacity-50 transition shadow-xs"
+                className="px-4 py-2 rounded-xl bg-primary text-xs font-bold text-white hover:bg-primary-dark disabled:opacity-50 transition shadow-xs"
               >
-                <Check size={13} />
-                <span>Accept Improvement</span>
+                Accept Improvement
               </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* ── Add Custom & Specialized Sections ─────────────────────────── */}
-      <div className="rounded-2xl border border-dashed border-[#EBDDD1] bg-[#FDFBF9] p-4 space-y-3">
-        <div>
-          <span className="font-bold text-[#2B1810] text-[11px] uppercase tracking-wider block">
-            Add Specialized &amp; Custom Sections:
-          </span>
-          <p className="text-[11px] text-[#765F5D]">
-            Add industry-recommended sections tailored to your academic domain and target roles.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {/* Preset Custom Section Types */}
-          <button
-            type="button"
-            onClick={() => addCustomSection("publications", "Publications & Research", "bullets")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#EBDDD1] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#7A0F1F] hover:bg-[#FFF9ED] transition"
-          >
-            <BookOpen size={12} />
-            <span>+ Publications</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => addCustomSection("volunteer", "Leadership & Activities", "bullets")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#EBDDD1] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#7A0F1F] hover:bg-[#FFF9ED] transition"
-          >
-            <Briefcase size={12} />
-            <span>+ Leadership</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => addCustomSection("volunteer", "Community Volunteering", "bullets")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#EBDDD1] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#7A0F1F] hover:bg-[#FFF9ED] transition"
-          >
-            <Sparkles size={12} />
-            <span>+ Volunteering</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => addCustomSection("custom", "Patents & Inventions", "bullets")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#EBDDD1] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#7A0F1F] hover:bg-[#FFF9ED] transition"
-          >
-            <Lightbulb size={12} />
-            <span>+ Patents</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => addCustomSection("languages", "Languages", "tags")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#EBDDD1] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#7A0F1F] hover:bg-[#FFF9ED] transition"
-          >
-            <Globe size={12} />
-            <span>+ Languages</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => addCustomSection("achievements", "Honors & Awards", "bullets")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#EBDDD1] bg-white px-2.5 py-1.5 text-xs font-semibold text-[#7A0F1F] hover:bg-[#FFF9ED] transition"
-          >
-            <Award size={12} />
-            <span>+ Awards</span>
-          </button>
-
-          {/* Domain framework sections */}
-          {framework.sections.map((sec) => {
-            const alreadyHas = data.sections.some((s) => s.customTitle === sec.label);
-            if (alreadyHas) return null;
-
-            return (
-              <button
-                key={sec.key}
-                type="button"
-                onClick={() => addCustomSection("custom", sec.label, "bullets")}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[#EBDDD1] bg-white px-2.5 py-1.5 text-xs font-semibold text-stone-700 hover:bg-[#FFF9ED] transition"
-              >
-                <Plus size={11} />
-                <span>{sec.label}</span>
-              </button>
-            );
-          })}
-
-          <button
-            type="button"
-            onClick={() => addCustomSection("custom", "Custom Section", "bullets")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#7A0F1F] bg-[#7A0F1F] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#600C18] transition shadow-2xs"
-          >
-            <Plus size={12} />
-            <span>+ Create Freeform Section</span>
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

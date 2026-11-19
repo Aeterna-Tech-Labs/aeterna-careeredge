@@ -29,7 +29,7 @@ const checklist = [
 const labelClass = "mb-2 block text-sm font-semibold text-foreground";
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-text-muted hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10";
+  "w-full rounded-xl border border-border bg-white px-4 py-3 text-base text-foreground outline-none transition placeholder:text-text-muted hover:border-primary/40 focus:border-primary focus:ring-4 focus:ring-primary/10 sm:text-sm";
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 20 },
@@ -107,10 +107,10 @@ export function LeadCaptureSection() {
     <MotionConfig reducedMotion="user">
       <section
         id="contact"
-        className="scroll-mt-24 bg-background py-20 sm:py-24"
+        className="scroll-mt-24 bg-background py-14 sm:py-20 lg:py-24"
       >
         <div className="page-container">
-          <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+          <div className="grid gap-8 sm:gap-12 lg:gap-16 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
             {/* Left column */}
             <motion.div
               variants={fadeUp}
@@ -123,11 +123,11 @@ export function LeadCaptureSection() {
                 Take your first step
               </p>
 
-              <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight text-foreground min-[375px]:text-3xl sm:text-4xl">
                 Your next opportunity starts with one profile.
               </h2>
 
-              <p className="mt-5 text-base leading-7 text-secondary-text">
+              <p className="mt-4 text-sm leading-7 text-secondary-text sm:mt-5 sm:text-base">
                 Tell us a little about yourself. Start exploring career
                 preparation and study opportunities with CareerEdge.
               </p>
@@ -137,7 +137,7 @@ export function LeadCaptureSection() {
                 initial="hidden"
                 whileInView="show"
                 viewport={{ once: true, amount: 0.5 }}
-                className="mt-8 space-y-4"
+                className="mt-6 space-y-3 sm:mt-8 sm:space-y-4"
               >
                 {checklist.map((text) => (
                   <motion.li
@@ -155,7 +155,7 @@ export function LeadCaptureSection() {
                 ))}
               </motion.ul>
 
-              <div className="mt-8 flex items-start gap-3 rounded-2xl border border-gold/40 bg-gold-soft/40 p-4">
+              <div className="mt-6 flex items-start gap-3 rounded-2xl border border-gold/40 bg-gold-soft/40 p-3.5 sm:mt-8 sm:p-4">
                 <LockKeyhole
                   size={19}
                   aria-hidden="true"
@@ -175,7 +175,7 @@ export function LeadCaptureSection() {
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, amount: 0.15 }}
-              className="relative overflow-hidden rounded-3xl border border-border bg-white p-6 shadow-xl shadow-black/5 sm:p-8"
+              className="relative overflow-hidden rounded-3xl border border-border bg-white p-4 shadow-xl shadow-black/5 min-[375px]:p-6 sm:p-8"
             >
               {/* Accent line */}
               <div
@@ -192,7 +192,7 @@ export function LeadCaptureSection() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -16 }}
                     transition={{ duration: 0.3, ease: "easeOut" }}
-                    className="flex min-h-[400px] flex-col items-center justify-center text-center"
+                    className="flex min-h-[320px] flex-col items-center justify-center text-center sm:min-h-[400px]"
                   >
                     <motion.div
                       initial={{ scale: 0 }}
@@ -208,7 +208,7 @@ export function LeadCaptureSection() {
                       <CheckCircle2 size={32} aria-hidden="true" />
                     </motion.div>
 
-                    <h3 className="mt-6 font-heading text-2xl font-bold text-foreground">
+                    <h3 className="mt-6 font-heading text-xl font-bold text-foreground sm:text-2xl">
                       Form demo completed
                     </h3>
 
@@ -234,7 +234,7 @@ export function LeadCaptureSection() {
                     transition={{ duration: 0.3, ease: "easeOut" }}
                   >
                     <div>
-                      <h3 className="font-heading text-xl font-bold text-foreground">
+                      <h3 className="font-heading text-lg font-bold text-foreground sm:text-xl">
                         Start your CareerEdge journey
                       </h3>
                       <p className="mt-2 text-sm text-secondary-text">
@@ -242,7 +242,7 @@ export function LeadCaptureSection() {
                       </p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+                    <form onSubmit={handleSubmit} className="mt-6 space-y-4 sm:mt-7 sm:space-y-5">
                       <div>
                         <label htmlFor="lead-name" className={labelClass}>
                           Full name <span className="text-error">*</span>
@@ -264,7 +264,7 @@ export function LeadCaptureSection() {
                         </label>
 
                         <div className="flex overflow-hidden rounded-xl border border-border bg-white transition hover:border-primary/40 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
-                          <span className="flex items-center border-r border-border bg-surface-muted px-4 text-sm font-semibold text-foreground">
+                          <span className="flex items-center border-r border-border bg-surface-muted px-3 text-sm font-semibold text-foreground sm:px-4">
                             +91
                           </span>
                           <input
@@ -277,7 +277,7 @@ export function LeadCaptureSection() {
                             pattern="[6-9][0-9]{9}"
                             title="Enter a valid 10-digit Indian mobile number."
                             required
-                            className="min-w-0 flex-1 bg-white px-4 py-3 text-sm outline-none placeholder:text-text-muted"
+                            className="min-w-0 flex-1 bg-white px-4 py-3 text-base outline-none placeholder:text-text-muted sm:text-sm"
                           />
                         </div>
                       </div>
@@ -349,7 +349,7 @@ export function LeadCaptureSection() {
                         initial="rest"
                         whileHover={requiredConsent ? "hover" : undefined}
                         whileTap={requiredConsent ? { scale: 0.98 } : undefined}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                        className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-colors hover:bg-primary-dark focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none sm:px-6"
                       >
                         Get Started
                         <motion.span

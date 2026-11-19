@@ -127,7 +127,7 @@ export function PricingClient({ studentName }: PricingClientProps) {
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>Basic Truth Check Audit (Top 3 issue summary)</span>
+                  <span>Basic Evidence Audit (Top 3 issue summary)</span>
                 </li>
                 <li className="flex items-start gap-2.5">
                   <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />

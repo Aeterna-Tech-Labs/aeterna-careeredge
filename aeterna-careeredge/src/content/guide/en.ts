@@ -33,13 +33,6 @@ export const GUIDE_SECTIONS: Record<string, SectionGuide> = {
     whatToDo: "Add certificates, project links, letters, or work samples that prove your skills.",
     whatYouGet: "Stronger resume lines. We can prove to employers which skills are real.",
   },
-  "truth-check": {
-    id: "truth-check",
-    title: "Truth Check",
-    whatThisIs: "A check to make sure every line on your resume or LinkedIn profile is really yours.",
-    whatToDo: "Run the check before you export. Add proof for any claim that has no evidence.",
-    whatYouGet: "100% honesty. Employers trust resumes where every claim has proof.",
-  },
   "role-fit-explorer": {
     id: "role-fit-explorer",
     title: "Role Fit Explorer",
@@ -110,20 +103,6 @@ export const GUIDE_SECTIONS: Record<string, SectionGuide> = {
     whatToDo: "Ask any question, or pick one of the suggested prompts.",
     whatYouGet: "Short, honest answers and direct buttons to the right screen. It never guesses or makes things up.",
   },
-  "progress-ledger": {
-    id: "progress-ledger",
-    title: "Progress Ledger",
-    whatThisIs: "An audit trail of all your verified career achievements, profile updates, and milestone completions.",
-    whatToDo: "Review your timeline as you complete courses, deposit evidence, and draft resumes.",
-    whatYouGet: "A clear record of verified growth you can share with mentors and placement advisors.",
-  },
-  "value-roi": {
-    id: "value-roi",
-    title: "Value & Impact ROI",
-    whatThisIs: "Your career investment summary showing readiness gains and estimated placement value.",
-    whatToDo: "Track how closing skill gaps increases your competitiveness for high-paying roles.",
-    whatYouGet: "Tangible measures of your placement readiness compared to industry benchmarks.",
-  },
   "pricing": {
     id: "pricing",
     title: "Pricing & Plans",
@@ -172,12 +151,6 @@ export const STATIC_GUIDE_FAQS: StaticFaq[] = [
     actionLabel: "Open Evidence Vault",
   },
   {
-    question: "What is Truth Check?",
-    answer: "Truth Check compares your resume claims with your Career Passport and Evidence Vault. It flags anything that does not have proof, so employers trust every line.",
-    actionRoute: "/truth-check",
-    actionLabel: "Open Truth Check",
-  },
-  {
     question: "How do I get my Career Readiness score higher?",
     answer: "Your score increases as you add real details: your degree, verified skills, at least one project, and proof in your Evidence Vault.",
     actionRoute: "/passport",
@@ -215,11 +188,6 @@ export const PAGE_SUGGESTED_QUESTIONS: Record<string, string[]> = {
     "What kind of documents count as good evidence?",
     "Is my uploaded document private and secure?",
     "How do I link evidence to a specific skill?",
-  ],
-  "/truth-check": [
-    "Why was one of my skills marked as needing evidence?",
-    "Can I confirm a claim if I do not have a certificate?",
-    "Why does honesty matter more than keyword stuffing?",
   ],
   "/resume": [
     "Which resume template is best for my profession?",

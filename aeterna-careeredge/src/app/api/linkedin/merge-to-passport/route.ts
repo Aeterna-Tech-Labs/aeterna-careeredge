@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
 import {
   upsertEducationRecord,
   upsertSkillRecord,
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
       approvedSkills = [],
       approvedEducations = [],
       approvedExperiences = [],
+      headline,
       provenance = "LINKEDIN_PDF",
     } = body;
 
@@ -42,37 +44,92 @@ export async function POST(req: NextRequest) {
       mergedCount++;
     }
 
-    // 2. Merge Approved Educations (Deduplicated)
+    // 2. Merge Approved Educations (Deduplicated with Year Extraction)
     for (const edu of approvedEducations) {
       if (!edu.institution || !edu.degree) continue;
+
+      let startYear: number | undefined;
+      let endYear: number | undefined;
+
+      if (edu.year) {
+        const yearMatches = String(edu.year).match(/\b(19\d\d|20\d\d)\b/g);
+        if (yearMatches && yearMatches.length === 1) {
+          endYear = parseInt(yearMatches[0], 10);
+        } else if (yearMatches && yearMatches.length >= 2) {
+          startYear = parseInt(yearMatches[0], 10);
+          endYear = parseInt(yearMatches[1], 10);
+        }
+      }
 
       await upsertEducationRecord(session.userId, {
         institution: edu.institution,
         degree: edu.degree,
         level: "UG",
+        startYear: startYear || null,
+        endYear: endYear || null,
         dataOrigin: provenance,
       });
       mergedCount++;
     }
 
-    // 3. Merge Approved Experiences (Deduplicated)
+    // 3. Merge Approved Experiences (Deduplicated with Duration Parsing)
     for (const exp of approvedExperiences) {
       if (!exp.company || !exp.title) continue;
+
+      let isCurrent = false;
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+
+      if (exp.duration) {
+        const durLower = String(exp.duration).toLowerCase();
+        if (durLower.includes("present") || durLower.includes("current")) {
+          isCurrent = true;
+        }
+
+        const yearMatches = String(exp.duration).match(/\b(19\d\d|20\d\d)\b/g);
+        if (yearMatches && yearMatches.length >= 1) {
+          startDate = new Date(parseInt(yearMatches[0], 10), 0, 1);
+          if (yearMatches.length >= 2) {
+            endDate = new Date(parseInt(yearMatches[1], 10), 11, 31);
+          }
+        }
+      }
 
       await upsertExperienceRecord(session.userId, {
         companyName: exp.company,
         jobTitle: exp.title,
         description: exp.description || "",
+        isCurrent,
+        startDate: startDate || new Date(),
+        endDate: isCurrent ? null : endDate || null,
         dataOrigin: provenance,
       });
       mergedCount++;
     }
 
-    await recalculateAndSavePassportScore(session.userId);
+    // 4. Update Headline in StudentProfile if requested
+    if (headline && typeof headline === "string" && headline.trim()) {
+      await prisma.studentProfile.upsert({
+        where: { userId: session.userId },
+        update: { headline: headline.trim() },
+        create: {
+          userId: session.userId,
+          headline: headline.trim(),
+          academicDomain: "General",
+        },
+      });
+    }
+
+    // 5. Update Recalculated Passport Score
+    const updatedScore = await recalculateAndSavePassportScore(session.userId);
 
     return NextResponse.json({
       success: true,
       mergedCount,
+      skillsCount: approvedSkills.length,
+      educationsCount: approvedEducations.length,
+      experiencesCount: approvedExperiences.length,
+      newPassportScore: updatedScore,
       message: `Successfully merged ${mergedCount} verified records into your Career Passport.`,
     });
   } catch (err: unknown) {

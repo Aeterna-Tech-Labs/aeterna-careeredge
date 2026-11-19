@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Inter, Noto_Sans_Kannada } from "next/font/google";
 import "./globals.css";
 
@@ -20,6 +20,13 @@ const notoKannada = Noto_Sans_Kannada({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#0F172A",
+};
+
 export const metadata: Metadata = {
   title: "Aeterna CareerEdge",
   description:
@@ -32,9 +39,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="h-full">
       <body
-        className={`${plusJakarta.variable} ${inter.variable} ${notoKannada.variable}`}
+        className={`${plusJakarta.variable} ${inter.variable} ${notoKannada.variable} min-h-dvh antialiased selection:bg-blue-600 selection:text-white`}
       >
         {children}
       </body>

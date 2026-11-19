@@ -117,39 +117,63 @@ export function normalizeResumeData(
   // If already in modular section format, return validated data
   if (Array.isArray(parsed.sections) && parsed.sections.length > 0) {
     const sections: ResumeSection[] = (parsed.sections as Record<string, unknown>[]).map((sec, secIdx) => {
+      const isSkills = sec.type === "skills";
       const entries: ResumeEntry[] = Array.isArray(sec.entries)
-        ? (sec.entries as Record<string, unknown>[]).map((ent, entIdx) => ({
-            id: String(ent.id || `ent_${secIdx}_${entIdx}_${Date.now()}`),
-            title: ent.title ? String(ent.title) : undefined,
-            subtitle: ent.subtitle ? String(ent.subtitle) : undefined,
-            location: ent.location ? String(ent.location) : undefined,
-            startDate: ent.startDate ? String(ent.startDate) : undefined,
-            endDate: ent.endDate ? String(ent.endDate) : undefined,
-            isCurrent: Boolean(ent.isCurrent),
-            score: ent.score ? String(ent.score) : undefined,
-            url: ent.url ? String(ent.url) : undefined,
-            text: ent.text ? String(ent.text) : undefined,
-            bullets: Array.isArray(ent.bullets)
-              ? (ent.bullets as (string | { id?: string; text: string; provenance?: string; isApproved?: boolean })[]).map((b, bIdx) => {
-                  if (typeof b === "string") {
+        ? (sec.entries as Record<string, unknown>[]).map((ent, entIdx) => {
+            const rawTags = Array.isArray(ent.tags) ? (ent.tags as string[]).map(String) : [];
+            const seenTagKeys = new Set<string>();
+            const uniqueTags: string[] = [];
+            for (const t of rawTags) {
+              const clean = t.trim();
+              if (!clean) continue;
+              const key = clean.toLowerCase().replace(/[^a-z0-9]/g, "");
+              if (!seenTagKeys.has(key)) {
+                seenTagKeys.add(key);
+                uniqueTags.push(clean);
+              }
+            }
+
+            const rawSubtitle = ent.subtitle ? String(ent.subtitle) : undefined;
+            // Clear subtitle if in skills section or if it duplicates tags
+            const subtitle = isSkills
+              ? undefined
+              : rawSubtitle && uniqueTags.length > 0 && uniqueTags.some((tag) => rawSubtitle.toLowerCase().includes(tag.toLowerCase()))
+              ? undefined
+              : rawSubtitle;
+
+            return {
+              id: String(ent.id || `ent_${secIdx}_${entIdx}_${Date.now()}`),
+              title: ent.title ? String(ent.title) : undefined,
+              subtitle,
+              location: ent.location ? String(ent.location) : undefined,
+              startDate: ent.startDate ? String(ent.startDate) : undefined,
+              endDate: ent.endDate ? String(ent.endDate) : undefined,
+              isCurrent: Boolean(ent.isCurrent),
+              score: ent.score ? String(ent.score) : undefined,
+              url: ent.url ? String(ent.url) : undefined,
+              text: ent.text ? String(ent.text) : undefined,
+              bullets: Array.isArray(ent.bullets)
+                ? (ent.bullets as (string | { id?: string; text: string; provenance?: string; isApproved?: boolean })[]).map((b, bIdx) => {
+                    if (typeof b === "string") {
+                      return {
+                        id: `b_${secIdx}_${entIdx}_${bIdx}`,
+                        text: b.replace(/^[•\-\*]\s*/, "").trim(),
+                        provenance: "STUDENT_INPUT" as const,
+                        isApproved: true,
+                      };
+                    }
                     return {
-                      id: `b_${secIdx}_${entIdx}_${bIdx}`,
-                      text: b,
-                      provenance: "STUDENT_INPUT" as const,
-                      isApproved: true,
+                      id: String(b.id || `b_${secIdx}_${entIdx}_${bIdx}`),
+                      text: String(b.text || "").replace(/^[•\-\*]\s*/, "").trim(),
+                      provenance: (b.provenance as ProvenanceType) || "STUDENT_INPUT",
+                      isApproved: b.isApproved ?? true,
+                      needsConfirmation: (b as { needsConfirmation?: boolean }).needsConfirmation,
                     };
-                  }
-                  return {
-                    id: String(b.id || `b_${secIdx}_${entIdx}_${bIdx}`),
-                    text: String(b.text || ""),
-                    provenance: (b.provenance as ProvenanceType) || "STUDENT_INPUT",
-                    isApproved: b.isApproved ?? true,
-                    needsConfirmation: (b as { needsConfirmation?: boolean }).needsConfirmation,
-                  };
-                })
-              : [],
-            tags: Array.isArray(ent.tags) ? (ent.tags as string[]).map(String) : undefined,
-          }))
+                  })
+                : [],
+              tags: uniqueTags.length > 0 ? uniqueTags : undefined,
+            };
+          })
         : [];
 
       return {

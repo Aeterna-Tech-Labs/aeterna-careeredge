@@ -21,6 +21,20 @@ export interface EntitlementCheckResult {
   reason?: string;
   meter: UsageMeter;
   plan: PlanConfig;
+  bypassedForTesting?: boolean;
+}
+
+/**
+ * Determine entitlement enforcement mode.
+ * Defaults to 'off' in development/staging/testing, 'on' in production.
+ */
+export function getEntitlementEnforcementMode(): "off" | "soft" | "on" {
+  const appEnv = (process.env.APP_ENV || process.env.NODE_ENV || "development").toLowerCase();
+  const raw = (process.env.ENTITLEMENT_ENFORCEMENT || "").toLowerCase();
+  if (raw === "off" || raw === "soft" || raw === "on") {
+    return raw;
+  }
+  return appEnv === "production" ? "on" : "off";
 }
 
 /**
@@ -176,7 +190,29 @@ export async function checkEntitlement(
     resetsAt,
   };
 
+  const enforcement = getEntitlementEnforcementMode();
+
   if (isExhausted) {
+    if (enforcement === "off") {
+      return {
+        allowed: true,
+        bypassedForTesting: true,
+        reason: `[Testing Mode] Limit of ${monthlyLimit} ${featureKey} reached, but enforcement is OFF.`,
+        meter,
+        plan: planConfig,
+      };
+    }
+
+    if (enforcement === "soft") {
+      return {
+        allowed: true,
+        bypassedForTesting: true,
+        reason: `[Soft Enforcement] You have used your ${monthlyLimit} monthly ${featureKey}. Operation allowed for testing.`,
+        meter,
+        plan: planConfig,
+      };
+    }
+
     return {
       allowed: false,
       reason: `You have reached your monthly limit of ${monthlyLimit} ${featureKey.toLowerCase().replace(/_/g, " ")} on the ${planConfig.displayName} plan. Quota resets on ${resetsAt.toLocaleDateString("en-IN")}.`,

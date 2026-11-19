@@ -36,13 +36,17 @@ export function BrandLogo({
 
       <div className="flex min-w-0 flex-col justify-center">
         <span
-          className={`${brandFont.className} bg-gradient-to-b from-[#FFD83D] via-[#F6B51C] to-[#E58F0C] bg-clip-text text-xl font-bold uppercase leading-none tracking-tight text-transparent`}
+          className={`${brandFont.className} ${
+            tone === "dark"
+              ? "bg-gradient-to-b from-[#FFD83D] via-[#F6B51C] to-[#E58F0C]"
+              : "bg-gradient-to-b from-[#B45309] via-[#D97706] to-[#78350F]"
+          } bg-clip-text text-lg sm:text-xl font-bold uppercase leading-none tracking-tight text-transparent`}
         >
           Aeterna
         </span>
         <span
-          className={`mt-1.5 text-[10px] font-medium leading-none tracking-[0.3em] ${
-            tone === "dark" ? "text-white/90" : "text-[#7A0F1F]"
+          className={`mt-1 text-[9px] sm:text-[10px] font-semibold leading-none tracking-[0.25em] sm:tracking-[0.3em] ${
+            tone === "dark" ? "text-white/90" : "text-slate-800"
           }`}
         >
           CareerEdge
