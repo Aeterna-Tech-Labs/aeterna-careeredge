@@ -74,6 +74,21 @@ export default async function ResumeBuilderPage({
     redirect("/login");
   }
 
+  const allUserResumes = await db.resume.findMany({
+    where: { userId: targetUserId },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      title: true,
+      targetRole: true,
+      templateId: true,
+      atsScore: true,
+      styleData: true,
+      updatedAt: true,
+      createdAt: true,
+    },
+  });
+
   return (
     <BuilderClient
       user={{
@@ -84,6 +99,7 @@ export default async function ResumeBuilderPage({
         preferredJobRole: user.profile?.preferredJobRole || undefined,
       }}
       resume={resume}
+      savedResumes={allUserResumes}
       evidenceItems={user.evidenceItems}
     />
   );

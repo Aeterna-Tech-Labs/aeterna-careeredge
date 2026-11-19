@@ -72,9 +72,9 @@ export function FAQSection() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <section className="bg-white py-20 sm:py-24">
+      <section className="bg-white py-14 sm:py-20 lg:py-24">
         <div className="page-container">
-          <div className="grid gap-12 lg:grid-cols-[0.75fr_1.25fr]">
+          <div className="grid gap-8 sm:gap-12 lg:gap-16 lg:grid-cols-[0.75fr_1.25fr]">
             <motion.div
               variants={headerVariants}
               initial="hidden"
@@ -85,11 +85,11 @@ export function FAQSection() {
                 Frequently asked questions
               </p>
 
-              <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight text-foreground min-[375px]:text-3xl sm:text-4xl">
                 Got questions? We&apos;ve got answers.
               </h2>
 
-              <p className="mt-5 text-base leading-7 text-secondary-text">
+              <p className="mt-5 text-sm leading-7 text-secondary-text sm:text-base">
                 Find out more about CareerEdge, its tools and how to begin your
                 career preparation journey.
               </p>
@@ -137,7 +137,7 @@ export function FAQSection() {
                         aria-expanded={isOpen}
                         aria-controls={answerId}
                         onClick={() => setOpenIndex(isOpen ? null : index)}
-                        className="group flex w-full items-center justify-between gap-5 rounded-lg py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                        className="group flex w-full items-center justify-between gap-3 rounded-lg py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:gap-5 sm:py-5"
                       >
                         <span
                           className={`font-heading text-sm font-semibold leading-6 transition-colors duration-200 group-hover:text-primary sm:text-base ${
@@ -178,7 +178,7 @@ export function FAQSection() {
                           transition={{ duration: 0.3, ease: "easeInOut" }}
                           className="overflow-hidden"
                         >
-                          <p className="pb-5 pr-10 text-sm leading-7 text-secondary-text">
+                          <p className="pb-4 pr-6 text-xs leading-6 text-secondary-text sm:pb-5 sm:pr-10 sm:text-sm sm:leading-7">
                             {faq.answer}
                           </p>
                         </motion.div>

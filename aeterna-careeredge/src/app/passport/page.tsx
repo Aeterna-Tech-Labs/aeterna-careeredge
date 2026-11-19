@@ -27,6 +27,7 @@ export default async function PassportPage() {
       experiences: { orderBy: { startDate: "desc" } },
       certifications: true,
       storedDocuments: { orderBy: { createdAt: "desc" } },
+      linkedInProfile: true,
     },
   });
 
@@ -34,8 +35,40 @@ export default async function PassportPage() {
     redirect("/login");
   }
 
+  let stagedLinkedIn = null;
+  if (user.linkedInProfile?.importedRawJson) {
+    try {
+      const parsed = JSON.parse(user.linkedInProfile.importedRawJson);
+      if (
+        (parsed.skills && parsed.skills.length > 0) ||
+        (parsed.experiences && parsed.experiences.length > 0) ||
+        (parsed.educations && parsed.educations.length > 0)
+      ) {
+        stagedLinkedIn = {
+          skills: (parsed.skills || []) as string[],
+          educations: (parsed.educations || []) as Array<{
+            degree: string;
+            institution: string;
+            year?: string;
+          }>,
+          experiences: (parsed.experiences || []) as Array<{
+            title: string;
+            company: string;
+            duration?: string;
+            description?: string;
+          }>,
+          headline: (parsed.headline || null) as string | null,
+          provenance: (parsed.provenance || "LINKEDIN_PDF") as string,
+        };
+      }
+    } catch {
+      // Ignored
+    }
+  }
+
   return (
     <PassportClient
+      stagedLinkedIn={stagedLinkedIn}
       user={{
         name: user.name,
         email: user.email,

@@ -52,7 +52,7 @@ export function TrustSection() {
     <MotionConfig reducedMotion="user">
       <section
         id="about"
-        className="relative isolate scroll-mt-24 overflow-hidden bg-background py-20 sm:py-24"
+        className="relative isolate scroll-mt-24 overflow-hidden bg-background py-14 sm:py-20 lg:py-24"
       >
         {/* Soft background glow */}
         <div
@@ -61,7 +61,7 @@ export function TrustSection() {
         />
 
         <div className="page-container">
-          <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
+          <div className="grid gap-8 sm:gap-12 lg:gap-16 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
             {/* Left content */}
             <motion.div
               variants={fadeUp}
@@ -72,26 +72,26 @@ export function TrustSection() {
               <motion.div
                 whileHover={{ rotate: -6, scale: 1.05 }}
                 transition={spring}
-                className="flex h-14 w-14 items-center justify-center rounded-2xl border border-gold/40 bg-gold-soft text-primary shadow-sm"
+                className="flex h-12 w-12 items-center justify-center rounded-2xl border border-gold/40 bg-gold-soft text-primary shadow-sm sm:h-14 sm:w-14"
               >
                 <ShieldCheck size={29} aria-hidden="true" />
               </motion.div>
 
-              <p className="mt-7 text-xs font-bold uppercase tracking-[0.2em] text-primary">
+              <p className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-primary sm:mt-7">
                 Responsible AI, always
               </p>
 
-              <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+              <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight text-foreground min-[375px]:text-3xl sm:text-4xl">
                 Your future deserves a human touch.
               </h2>
 
-              <p className="mt-5 text-base leading-7 text-secondary-text">
+              <p className="mt-4 text-sm leading-7 text-secondary-text sm:mt-5 sm:text-base">
                 Technology can make preparation easier, but your experiences,
                 decisions and ambitions remain at the centre of your career
                 journey.
               </p>
 
-              <div className="mt-7 flex items-center gap-3 rounded-2xl border border-gold/40 bg-white p-4 shadow-sm">
+              <div className="mt-6 flex items-center gap-3 rounded-2xl border border-gold/40 bg-white p-3.5 shadow-sm sm:mt-7 sm:p-4">
                 <CheckCircle2
                   className="shrink-0 text-success"
                   size={21}
@@ -109,7 +109,7 @@ export function TrustSection() {
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, amount: 0.2 }}
-              className="space-y-4"
+              className="space-y-3 sm:space-y-4"
             >
               {principles.map((principle, index) => {
                 const Icon = principle.icon;
@@ -120,9 +120,9 @@ export function TrustSection() {
                     variants={fadeLeft}
                     whileHover={{ y: -4 }}
                     transition={spring}
-                    className="group flex gap-5 rounded-2xl border border-border bg-white p-6 shadow-sm transition-[box-shadow,border-color] duration-200 hover:border-gold hover:shadow-lg sm:p-7"
+                    className="group flex gap-3 rounded-2xl border border-border bg-white p-4 shadow-sm transition-[box-shadow,border-color] duration-200 hover:border-gold hover:shadow-lg min-[375px]:gap-4 min-[375px]:p-5 sm:gap-5 sm:p-7"
                   >
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-gold bg-background text-primary shadow-sm transition-colors duration-200 group-hover:bg-primary group-hover:text-white">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gold bg-background text-primary shadow-sm transition-colors duration-200 group-hover:bg-primary group-hover:text-white sm:h-12 sm:w-12">
                       <Icon size={23} aria-hidden="true" />
                     </div>
 
@@ -131,12 +131,12 @@ export function TrustSection() {
                         <span className="text-xs font-bold text-primary/50">
                           0{index + 1}
                         </span>
-                        <h3 className="font-heading text-base font-bold text-foreground sm:text-lg">
+                        <h3 className="font-heading text-sm font-bold text-foreground min-[375px]:text-base sm:text-lg">
                           {principle.title}
                         </h3>
                       </div>
 
-                      <p className="mt-2 text-sm leading-6 text-secondary-text">
+                      <p className="mt-2 text-xs leading-6 text-secondary-text sm:text-sm">
                         {principle.description}
                       </p>
                     </div>

@@ -5,6 +5,7 @@
 import React from "react";
 import type { FullResumeData, ResumeSection, ResumeEntry } from "@/lib/resume/types";
 import { SAFE_FONTS } from "@/lib/resume/templates";
+import { cleanBulletText, cleanMojibake } from "@/lib/resume/sanitizer";
 import {
   Mail,
   Phone,
@@ -409,7 +410,7 @@ function RenderSectionBlock({
 
 function RenderEntryItem({
   entry,
-  sectionType: _sectionType,
+  sectionType,
   displayMode,
   style,
   formatDate,
@@ -420,7 +421,33 @@ function RenderEntryItem({
   style: FullResumeData["style"];
   formatDate: (d?: string) => string;
 }) {
-  const hasHeader = entry.title || entry.subtitle || entry.startDate || entry.score;
+  // Deduplicate and sanitize tags
+  const seenTagKeys = new Set<string>();
+  const uniqueTags: string[] = [];
+  for (const t of entry.tags || []) {
+    const clean = t.trim();
+    if (!clean) continue;
+    const key = clean.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (!seenTagKeys.has(key)) {
+      seenTagKeys.add(key);
+      uniqueTags.push(clean);
+    }
+  }
+
+  // Never duplicate skills in subtitle if tags are present or in skills section
+  const isSkillsSection = sectionType === "skills" || displayMode === "tags";
+  const subtitleDuplicatesTags =
+    uniqueTags.length > 0 &&
+    (isSkillsSection ||
+      (Boolean(entry.subtitle) &&
+        uniqueTags.some((tag) =>
+          entry.subtitle?.toLowerCase().includes(tag.toLowerCase())
+        )));
+
+  const shouldRenderSubtitle =
+    Boolean(entry.subtitle) && !isSkillsSection && !subtitleDuplicatesTags;
+
+  const hasHeader = entry.title || shouldRenderSubtitle || entry.startDate || entry.score;
 
   return (
     <div className={`resume-entry ${style.page?.fitToOnePage ? "space-y-0.5" : "space-y-1"}`}>
@@ -428,7 +455,7 @@ function RenderEntryItem({
         <div className="flex flex-wrap items-baseline justify-between gap-x-2 text-xs">
           <div className="font-semibold text-stone-900">
             <span>{entry.title}</span>
-            {entry.subtitle && (
+            {shouldRenderSubtitle && (
               <span className="font-normal text-stone-600"> • {entry.subtitle}</span>
             )}
             {entry.location && (
@@ -473,9 +500,9 @@ function RenderEntryItem({
       )}
 
       {/* Skills or Tags */}
-      {entry.tags && entry.tags.length > 0 && (
+      {uniqueTags.length > 0 && (
         <div className={`flex flex-wrap ${style.page?.fitToOnePage ? "gap-1 pt-0.5" : "gap-1.5 pt-0.5"}`}>
-          {entry.tags.map((tag, idx) => (
+          {uniqueTags.map((tag, idx) => (
             <span
               key={idx}
               className={`rounded ${
@@ -505,7 +532,7 @@ function RenderEntryItem({
       {entry.bullets && entry.bullets.length > 0 && (
         displayMode === "paragraph" ? (
           <p className="leading-relaxed text-stone-700 whitespace-pre-line text-xs">
-            {entry.bullets.map((b) => b.text).join(" ")}
+            {entry.bullets.map((b) => cleanBulletText(b.text)).join(" ")}
           </p>
         ) : (
           <ul
@@ -514,11 +541,14 @@ function RenderEntryItem({
               paddingLeft: `${style.spacing.bulletIndent}px`,
             }}
           >
-            {entry.bullets.map((b) => (
-              <li key={b.id} className="resume-bullet leading-relaxed">
-                <span>{b.text}</span>
-              </li>
-            ))}
+            {entry.bullets.map((b) => {
+              const cleanBullet = cleanBulletText(b.text);
+              return (
+                <li key={b.id} className="resume-bullet leading-relaxed">
+                  <span>{cleanBullet}</span>
+                </li>
+              );
+            })}
           </ul>
         )
       )}

@@ -2,7 +2,7 @@
 // LinkedIn OpenID Connect Initiation & Disconnection API (Day 2 Part 4.1)
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
+import { getSession, isSecureCookie } from "@/lib/session";
 import {
   isLinkedInConfigured,
   generateLinkedInAuthUrl,
@@ -51,21 +51,21 @@ export async function GET(req: NextRequest) {
     // Set CSRF verification cookies with explicit sameSite: "lax" so cross-site redirects preserve them
     response.cookies.set("linkedin_oauth_state", state, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecureCookie(),
       sameSite: "lax",
       maxAge: 600, // 10 minutes
       path: "/",
     });
     response.cookies.set("linkedin_oauth_nonce", nonce, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecureCookie(),
       sameSite: "lax",
       maxAge: 600,
       path: "/",
     });
     response.cookies.set("linkedin_oauth_uid", session.userId, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecureCookie(),
       sameSite: "lax",
       maxAge: 600,
       path: "/",

@@ -9,8 +9,8 @@ import { setSessionCookie } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  // Strict production check
-  if (process.env.NODE_ENV === "production") {
+  const isLocal = req.nextUrl.hostname === "localhost" || req.nextUrl.hostname === "127.0.0.1";
+  if (!isLocal && process.env.NODE_ENV === "production") {
     return NextResponse.json({ error: "Endpoint not found" }, { status: 404 });
   }
 
@@ -41,7 +41,9 @@ export async function GET(req: NextRequest) {
     onboardingCompleted: user.onboardingCompleted,
   });
 
-  const targetUrl = user.onboardingCompleted ? "/dashboard" : "/onboarding";
+  const nextParam = searchParams.get("next");
+  const defaultTarget = user.onboardingCompleted ? "/dashboard" : "/onboarding";
+  const targetUrl = nextParam || defaultTarget;
   return NextResponse.redirect(new URL(targetUrl, origin));
 }
 

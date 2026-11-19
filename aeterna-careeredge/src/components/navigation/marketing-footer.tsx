@@ -1,12 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Mail, MapPin, Phone } from "lucide-react";
-import { Libre_Baskerville } from "next/font/google";
-
-const brandFont = Libre_Baskerville({
-  subsets: ["latin"],
-  weight: "700",
-});
+import { BrandLogo } from "@/components/common/BrandLogo";
 
 const footerLinks = [
   { label: "Home", href: "/" },
@@ -76,29 +71,7 @@ export function MarketingFooter() {
         {/* Link columns */}
         <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1.3fr]">
           <div>
-            <Link
-              href="/"
-              aria-label="Aeterna CareerEdge home"
-              className="inline-flex items-center gap-2"
-            >
-              <Image
-                src="/assets/logos/company-logo.webp"
-                alt=""
-                width={60}
-                height={60}
-                className="h-10 w-10 shrink-0 object-contain"
-              />
-              <div className="flex flex-col justify-center">
-                <span
-                  className={`${brandFont.className} bg-gradient-to-b from-[#FFD83D] via-[#F6B51C] to-[#E58F0C] bg-clip-text text-xl font-bold uppercase leading-none tracking-tight text-transparent`}
-                >
-                  Aeterna
-                </span>
-                <span className="mt-1.5 text-[10px] font-medium leading-none tracking-[0.3em] text-white/90">
-                  CareerEdge
-                </span>
-              </div>
-            </Link>
+            <BrandLogo tone="dark" href="/" />
 
             <p className="mt-5 max-w-sm text-sm leading-6 text-white/70">
               Your Career. Your Future. One Passport. Empowering students to

@@ -286,14 +286,6 @@ export function DashboardClient({ user }: DashboardClientProps) {
         actionText: "Upload or Build",
       },
       {
-        id: "truth-check",
-        label: "Run Truth Check verification",
-        description: "Ensure 100% of claims are backed by documented proof.",
-        isComplete: resumeCount > 0 && evidenceCount > 0,
-        route: "/truth-check",
-        actionText: "Run Check",
-      },
-      {
         id: "linkedin",
         label: "Optimize your LinkedIn headline & summary",
         description: "Align your public professional brand with target recruiter keywords.",
@@ -388,60 +380,60 @@ export function DashboardClient({ user }: DashboardClientProps) {
       {/* Product Tour Overlay (Auto-triggers on first signup; replayable anytime) */}
       <ProductTour forceOpen={tourOpen} onClose={() => setTourOpen(false)} />
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 space-y-8">
+      <div className="mx-auto max-w-7xl space-y-6 sm:space-y-8 min-w-0 w-full">
         {/* ============================================================
             1. GREETING & STATUS BAR
         ============================================================ */}
         <section
           aria-label="Student Overview"
-          className="rounded-3xl border border-[#EBDDD1] bg-gradient-to-r from-[#FFF8F0] via-white to-[#FFF9ED] p-6 sm:p-8 shadow-xs"
+          className="rounded-2xl sm:rounded-3xl border border-border bg-surface p-4 sm:p-6 md:p-8 shadow-card"
         >
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+            <div className="space-y-1.5 sm:space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#7A0F1F] px-3 py-1 text-xs font-bold text-white shadow-2xs">
-                  <GraduationCap size={13} aria-hidden="true" />
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-600 px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-bold text-white shadow-xs">
+                  <GraduationCap size={12} aria-hidden="true" />
                   <span>Tier 1 Verified Student</span>
                 </span>
-                <span className="rounded-full bg-stone-100 border border-stone-200 px-2.5 py-0.5 text-xs font-medium text-stone-700">
+                <span className="rounded-full bg-surface-muted border border-border px-2.5 sm:px-3 py-0.5 sm:py-1 text-[11px] sm:text-xs font-semibold text-secondary-text">
                   {academicDomain}
                 </span>
               </div>
 
-              <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight text-[#2B1B1B]">
+              <h1 className="font-heading text-xl sm:text-2xl md:text-3.5xl font-extrabold tracking-tight text-foreground">
                 Welcome back, {firstName} 👋
               </h1>
 
-              <p className="text-xs sm:text-sm text-[#765F5D] leading-relaxed max-w-2xl">
-                Target Role: <strong className="text-[#2B1B1B]">{preferredJobRole}</strong> • Verified Career Passport is{" "}
-                <strong className="text-[#7A0F1F] font-bold">{score}% complete</strong>.
+              <p className="text-xs sm:text-sm text-secondary-text leading-relaxed max-w-2xl">
+                Target Role: <strong className="text-foreground font-semibold">{preferredJobRole}</strong> • Verified Passport:{" "}
+                <strong className="text-primary font-bold">{score}% complete</strong>.
               </p>
             </div>
 
-            {/* Quick Actions & Tour Buttons */}
-            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            {/* Quick Actions - Simplified and compact below md & sm */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setTourOpen(true)}
-                className="inline-flex items-center gap-2 rounded-xl border border-[#F2B63D] bg-[#FFF9ED] px-3.5 py-2 text-xs font-bold text-[#7A0F1F] hover:bg-[#FFF2D6] transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A0F1F]"
+                className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                <Sparkles size={14} className="text-[#F2B63D]" aria-hidden="true" />
-                <span>Take Product Tour</span>
+                <Sparkles size={13} className="text-blue-500" aria-hidden="true" />
+                <span>Tour</span>
               </button>
 
               <UploadResumeButton variant="outline" label="Upload Resume" />
 
               <Link
                 href="/onboarding?from=dashboard"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3.5 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-50 hover:border-stone-400 transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A0F1F]"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 sm:px-3.5 py-2 text-xs font-semibold text-secondary-text hover:bg-surface-muted transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                <Pencil size={13} className="text-stone-500" aria-hidden="true" />
-                <span>Edit Onboarding Info</span>
+                <Pencil size={12} className="text-muted-text" aria-hidden="true" />
+                <span>Edit Profile</span>
               </Link>
 
               <Link
                 href="/passport"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#7A0F1F] px-4 py-2 text-xs font-bold text-white hover:bg-[#4C0915] transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A0F1F]"
+                className="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl bg-primary px-3.5 sm:px-4 py-2 text-xs font-bold text-white hover:bg-primary-dark transition shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 <span>Career Passport</span>
                 <ArrowRight size={13} aria-hidden="true" />
@@ -459,14 +451,14 @@ export function DashboardClient({ user }: DashboardClientProps) {
             2. NEXT BEST ACTION (Single Most Important Action)
         ============================================================ */}
         <section id="tour-next-best-action" data-tour="next-best-action" aria-label="Next Best Action">
-          <div className="relative overflow-hidden rounded-3xl border-2 border-[#F2B63D] bg-gradient-to-r from-[#4C0915] via-[#630E1E] to-[#7A0F1F] p-6 sm:p-7 text-white shadow-lg shadow-[#4C0915]/15">
+          <div className="relative overflow-hidden rounded-3xl border border-slate-800 bg-gradient-to-r from-[#0B132B] via-[#0F172A] to-[#1E3A8A] p-6 sm:p-7 text-white shadow-xl shadow-slate-950/20">
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="space-y-1.5 max-w-2xl">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-[#F2B63D] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#4C0915]">
+                  <span className="rounded-full bg-blue-500 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-xs">
                     {nextAction.badgeText || "Recommended Action"}
                   </span>
-                  <span className="text-[11px] font-semibold text-white/70">
+                  <span className="text-[11px] font-semibold text-slate-400">
                     Highest Priority Step
                   </span>
                 </div>
@@ -475,7 +467,7 @@ export function DashboardClient({ user }: DashboardClientProps) {
                   {nextAction.title}
                 </h2>
 
-                <p className="text-xs sm:text-sm text-white/85 leading-relaxed">
+                <p className="text-xs sm:text-sm text-slate-200 leading-relaxed">
                   {nextAction.description}
                 </p>
               </div>
@@ -483,7 +475,7 @@ export function DashboardClient({ user }: DashboardClientProps) {
               <div className="shrink-0">
                 <Link
                   href={nextAction.actionRoute}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-[#F2B63D] px-6 py-3.5 text-xs sm:text-sm font-bold text-[#4C0915] shadow-md shadow-black/20 hover:bg-[#E8A020] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-6 py-3.5 text-xs sm:text-sm font-bold text-white shadow-md shadow-blue-950/40 hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
                   <span>{nextAction.actionLabel}</span>
                   <ArrowRight size={15} aria-hidden="true" />
@@ -558,33 +550,33 @@ export function DashboardClient({ user }: DashboardClientProps) {
             Core Quick Actions
           </h2>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <Link
               href={user.resumes && user.resumes.length > 0 ? `/resume/builder?id=${user.resumes[0].id}` : "/resume"}
-              className="group flex flex-col justify-between rounded-2xl border border-[#EBDDD1] bg-white p-4 transition-all hover:border-[#7A0F1F] hover:bg-[#FFFBF9] shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A0F1F]"
+              className="group flex flex-col justify-between rounded-2xl border border-border bg-surface p-4 transition-all hover:border-primary hover:shadow-card shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF9ED] text-[#7A0F1F] border border-[#EBDDD1] group-hover:scale-105 transition-transform">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-muted text-primary border border-border group-hover:scale-105 transition-transform">
                 <FileText size={17} aria-hidden="true" />
               </div>
               <div className="mt-3">
-                <h3 className="font-heading text-xs sm:text-sm font-bold text-[#2B1B1B] group-hover:text-[#7A0F1F] transition-colors">
+                <h3 className="font-heading text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                   {user.resumes && user.resumes.length > 0 ? "Edit Active Resume" : "Build New Resume"}
                 </h3>
-                <p className="mt-0.5 text-[11px] text-[#765F5D]">
+                <p className="mt-0.5 text-[11px] text-secondary-text">
                   ATS-calibrated templates
                 </p>
               </div>
             </Link>
 
-            <div className="group flex flex-col justify-between rounded-2xl border border-[#F2B63D]/60 bg-[#FFFDF9] p-4 transition-all hover:border-[#7A0F1F] hover:bg-[#FFF8F0] shadow-2xs">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#7A0F1F] text-white group-hover:scale-105 transition-transform">
+            <div className="group flex flex-col justify-between rounded-2xl border border-blue-200 bg-surface p-4 transition-all hover:border-primary hover:shadow-card shadow-2xs">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-white group-hover:scale-105 transition-transform">
                 <Upload size={17} aria-hidden="true" />
               </div>
               <div className="mt-3">
-                <h3 className="font-heading text-xs sm:text-sm font-bold text-[#2B1B1B] group-hover:text-[#7A0F1F] transition-colors">
+                <h3 className="font-heading text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                   Upload Resume
                 </h3>
-                <p className="mt-0.5 text-[11px] text-[#765F5D]">
+                <p className="mt-0.5 text-[11px] text-secondary-text">
                   PDF or Word import
                 </p>
               </div>
@@ -595,16 +587,16 @@ export function DashboardClient({ user }: DashboardClientProps) {
 
             <Link
               href="/resume/check"
-              className="group flex flex-col justify-between rounded-2xl border border-[#EBDDD1] bg-white p-4 transition-all hover:border-[#7A0F1F] hover:bg-[#FFFBF9] shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A0F1F]"
+              className="group flex flex-col justify-between rounded-2xl border border-border bg-surface p-4 transition-all hover:border-primary hover:shadow-card shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF9ED] text-[#7A0F1F] border border-[#EBDDD1] group-hover:scale-105 transition-transform">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-muted text-primary border border-border group-hover:scale-105 transition-transform">
                 <ShieldCheck size={17} aria-hidden="true" />
               </div>
               <div className="mt-3">
-                <h3 className="font-heading text-xs sm:text-sm font-bold text-[#2B1B1B] group-hover:text-[#7A0F1F] transition-colors">
+                <h3 className="font-heading text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                   ATS Resume Check
                 </h3>
-                <p className="mt-0.5 text-[11px] text-[#765F5D]">
+                <p className="mt-0.5 text-[11px] text-secondary-text">
                   Job description match
                 </p>
               </div>
@@ -612,16 +604,16 @@ export function DashboardClient({ user }: DashboardClientProps) {
 
             <Link
               href="/evidence-vault"
-              className="group flex flex-col justify-between rounded-2xl border border-[#EBDDD1] bg-white p-4 transition-all hover:border-[#7A0F1F] hover:bg-[#FFFBF9] shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A0F1F]"
+              className="group flex flex-col justify-between rounded-2xl border border-border bg-surface p-4 transition-all hover:border-primary hover:shadow-card shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF9ED] text-[#7A0F1F] border border-[#EBDDD1] group-hover:scale-105 transition-transform">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-muted text-primary border border-border group-hover:scale-105 transition-transform">
                 <Upload size={17} aria-hidden="true" />
               </div>
               <div className="mt-3">
-                <h3 className="font-heading text-xs sm:text-sm font-bold text-[#2B1B1B] group-hover:text-[#7A0F1F] transition-colors">
+                <h3 className="font-heading text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                   Deposit Evidence
                 </h3>
-                <p className="mt-0.5 text-[11px] text-[#765F5D]">
+                <p className="mt-0.5 text-[11px] text-secondary-text">
                   Certificates &amp; repos
                 </p>
               </div>
@@ -629,16 +621,16 @@ export function DashboardClient({ user }: DashboardClientProps) {
 
             <Link
               href="/jobs"
-              className="group flex flex-col justify-between rounded-2xl border border-[#EBDDD1] bg-white p-4 transition-all hover:border-[#7A0F1F] hover:bg-[#FFFBF9] shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A0F1F]"
+              className="group flex flex-col justify-between rounded-2xl border border-border bg-surface p-4 transition-all hover:border-primary hover:shadow-card shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF9ED] text-[#7A0F1F] border border-[#EBDDD1] group-hover:scale-105 transition-transform">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-muted text-primary border border-border group-hover:scale-105 transition-transform">
                 <BriefcaseBusiness size={17} aria-hidden="true" />
               </div>
               <div className="mt-3">
-                <h3 className="font-heading text-xs sm:text-sm font-bold text-[#2B1B1B] group-hover:text-[#7A0F1F] transition-colors">
+                <h3 className="font-heading text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                   Explore Jobs
                 </h3>
-                <p className="mt-0.5 text-[11px] text-[#765F5D]">
+                <p className="mt-0.5 text-[11px] text-secondary-text">
                   Curated domain vacancies
                 </p>
               </div>
@@ -654,7 +646,7 @@ export function DashboardClient({ user }: DashboardClientProps) {
             Career Readiness Metrics
           </h2>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3 sm:grid-cols-4">
             <StatCard
               label="Passport Readiness"
               value={`${score}%`}
@@ -708,10 +700,10 @@ export function DashboardClient({ user }: DashboardClientProps) {
               subtitle="Latest verified milestones and updates on your profile."
               action={
                 <Link
-                  href="/progress"
+                  href="/passport"
                   className="inline-flex items-center gap-1 text-xs font-bold text-[#7A0F1F] hover:text-[#4C0915] transition"
                 >
-                  <span>View Progress Ledger</span>
+                  <span>View Career Passport</span>
                   <ArrowUpRight size={13} aria-hidden="true" />
                 </Link>
               }
@@ -950,7 +942,7 @@ export function DashboardClient({ user }: DashboardClientProps) {
         <section id="tour-career-guide" data-tour="career-guide" aria-label="How CareerEdge Works">
           <HowItWorksPanel sectionId="career-passport" />
         </section>
-      </main>
+      </div>
     </StudentLayout>
   );
 }

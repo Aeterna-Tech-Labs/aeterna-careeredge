@@ -1,10 +1,12 @@
 "use client";
 
-import { Bell, Menu, Search, LogOut, Shield } from "lucide-react";
+import { Menu, LogOut } from "lucide-react";
+import { BrandLogo } from "@/components/common/BrandLogo";
 
 interface StudentHeaderProps {
   userName?: string;
   userInitial?: string;
+  isSidebarCollapsed?: boolean;
   onMenuClick?: () => void;
   onLogout?: () => void;
 }
@@ -12,88 +14,58 @@ interface StudentHeaderProps {
 export function StudentHeader({
   userName = "Student",
   userInitial = "S",
+  isSidebarCollapsed = false,
   onMenuClick,
   onLogout,
 }: StudentHeaderProps) {
+  const handleLogout = onLogout ?? (async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {}
+    window.location.href = "/login";
+  });
+
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-white/95 px-4 backdrop-blur sm:px-6">
-      {/* Left: hamburger + search */}
-      <div className="flex items-center gap-3 flex-1">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white/95 px-3 sm:px-6 backdrop-blur shrink-0">
+      {/* Left: Mobile hamburger + BrandLogo (visible on mobile, and on desktop when sidebar is collapsed) */}
+      <div className="flex items-center gap-2 sm:gap-3">
         <button
           type="button"
           onClick={onMenuClick}
           aria-label="Open navigation menu"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-secondary-text hover:bg-surface-muted md:hidden"
+          className="inline-flex md:!hidden h-11 w-11 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 transition-colors touch-target"
         >
           <Menu size={20} />
         </button>
 
-        {/* Search bar */}
-        <div className="relative hidden sm:block max-w-md flex-1">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-text"
-          />
-          <input
-            type="text"
-            placeholder="Search verified skills, jobs, mock assessments…"
-            className="h-9 w-full rounded-lg border border-border bg-surface-muted pl-9 pr-4 text-[13px] text-foreground placeholder:text-muted-text focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-colors"
-          />
+        {/* Brand Logo: Always shown on mobile, and on desktop/tablet only when sidebar is collapsed */}
+        <div className={isSidebarCollapsed ? "flex items-center" : "flex items-center md:hidden"}>
+          <BrandLogo tone="light" href="/dashboard" />
         </div>
       </div>
 
-      {/* Right: language, ESG, notifications, user */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* Language badge */}
-        <span className="hidden sm:inline-flex h-7 items-center rounded-md border border-border bg-surface-muted px-2 text-[11px] font-semibold text-secondary-text">
-          EN
+      {/* Right: Clean User Profile & Sign Out */}
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        <span className="hidden sm:inline-block text-sm font-semibold text-slate-800 truncate max-w-[200px]">
+          {userName}
         </span>
 
-        {/* ESG badge */}
-        <span className="hidden lg:inline-flex h-7 items-center gap-1 rounded-md border border-border bg-surface-muted px-2 text-[11px] font-semibold text-secondary-text">
-          <Shield size={12} />
-          ESG
-        </span>
+        <div
+          title={userName}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-slate-800 to-slate-950 text-sm font-bold text-white shadow-xs ring-1 ring-slate-700/20 shrink-0"
+        >
+          {userInitial}
+        </div>
 
-        {/* Notifications */}
         <button
           type="button"
-          aria-label="Notifications"
-          className="relative flex h-9 w-9 items-center justify-center rounded-lg text-secondary-text transition hover:bg-surface-muted hover:text-primary"
+          onClick={handleLogout}
+          title="Sign out"
+          aria-label="Sign out"
+          className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors touch-target"
         >
-          <Bell size={18} />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#F2B63D] ring-2 ring-white" />
+          <LogOut size={18} />
         </button>
-
-        {/* Divider */}
-        <div className="h-8 w-px bg-border" />
-
-        {/* User */}
-        <div className="flex items-center gap-2.5">
-          <div className="hidden sm:block text-right">
-            <p className="text-[13px] font-semibold text-foreground leading-tight">
-              {userName}
-            </p>
-            <p className="text-[10px] font-medium text-primary">
-              Tier 1 Verified Student
-            </p>
-          </div>
-
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#F2B63D] to-[#E8A020] text-sm font-bold text-[#4C0915] shadow-sm">
-            {userInitial}
-          </div>
-
-          {onLogout && (
-            <button
-              type="button"
-              onClick={onLogout}
-              aria-label="Sign out"
-              className="hidden sm:flex h-8 w-8 items-center justify-center rounded-lg text-secondary-text transition hover:bg-surface-muted hover:text-primary"
-            >
-              <LogOut size={16} />
-            </button>
-          )}
-        </div>
       </div>
     </header>
   );

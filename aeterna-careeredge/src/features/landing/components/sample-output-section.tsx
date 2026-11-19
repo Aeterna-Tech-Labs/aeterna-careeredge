@@ -24,7 +24,7 @@ const tabs = [
 type TabId = (typeof tabs)[number]["id"];
 
 const cardClass =
-  "mx-auto max-w-xl overflow-hidden rounded-2xl border border-border bg-white shadow-xl shadow-black/5";
+  "mx-auto w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-white shadow-xl shadow-black/5";
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24 },
@@ -33,15 +33,15 @@ const fadeUp: Variants = {
 
 function ResumePreview() {
   return (
-    <div className={`${cardClass} p-6 sm:p-8`}>
+    <div className={`${cardClass} p-4 min-[375px]:p-6 sm:p-8`}>
       <div className="border-b border-border pb-5">
-        <p className="font-heading text-2xl font-bold text-primary">
+        <p className="font-heading text-xl font-bold text-primary sm:text-2xl">
           Priya Sharma
         </p>
         <p className="mt-1 text-xs text-secondary-text">
           Computer Science Student · Bengaluru, India
         </p>
-        <p className="mt-3 text-xs text-secondary-text">
+        <p className="mt-3 break-words text-xs text-secondary-text">
           priya@example.com · +91 XXXXX XXXXX · LinkedIn Profile
         </p>
       </div>
@@ -107,10 +107,10 @@ function ResumePreview() {
 
 function SopPreview() {
   return (
-    <div className={`${cardClass} p-6 sm:p-8`}>
+    <div className={`${cardClass} p-4 min-[375px]:p-6 sm:p-8`}>
       <div className="flex items-center justify-between border-b border-border pb-4">
         <div>
-          <p className="font-heading text-lg font-bold text-primary">
+          <p className="font-heading text-base font-bold text-primary sm:text-lg">
             Statement of Purpose
           </p>
           <p className="mt-1 text-xs text-secondary-text">
@@ -173,13 +173,13 @@ function LinkedInPreview() {
     <div className={cardClass}>
       <div className="h-24 bg-gradient-to-r from-[#5C0914] via-primary to-[#9A1B2E] sm:h-32" />
 
-      <div className="px-6 pb-7 text-left sm:px-8">
+      <div className="px-4 pb-6 text-left sm:px-8 sm:pb-7">
         <div className="-mt-9 flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-gold-soft font-heading text-xl font-bold text-primary sm:-mt-11 sm:h-20 sm:w-20 sm:text-2xl">
           PS
         </div>
 
         <div className="mt-4">
-          <h3 className="font-heading text-xl font-bold text-foreground">
+          <h3 className="font-heading text-lg font-bold text-foreground sm:text-xl">
             Priya Sharma
           </h3>
           <p className="mt-1 text-sm text-secondary-text">
@@ -251,7 +251,7 @@ export function SampleOutputSection() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <section className="relative isolate overflow-hidden bg-white py-20 sm:py-24">
+      <section className="relative isolate overflow-hidden bg-white py-14 sm:py-20 lg:py-24">
         {/* Soft background glow */}
         <div
           aria-hidden="true"
@@ -270,11 +270,11 @@ export function SampleOutputSection() {
               See what you can create
             </p>
 
-            <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight text-foreground min-[375px]:text-3xl sm:text-4xl">
               Your story, presented with confidence.
             </h2>
 
-            <p className="mt-5 text-base leading-7 text-secondary-text">
+            <p className="mt-5 text-sm leading-7 text-secondary-text sm:text-base">
               Explore examples of the professional documents and profiles you
               can work towards with CareerEdge.
             </p>
@@ -290,7 +290,7 @@ export function SampleOutputSection() {
             <div
               role="tablist"
               aria-label="Sample output types"
-              className="mx-auto flex w-fit max-w-full flex-wrap justify-center gap-1 rounded-2xl border border-border bg-white p-1.5 shadow-sm"
+              className="mx-auto flex w-full max-w-full flex-col gap-1 rounded-2xl border border-border bg-white p-1.5 shadow-sm sm:w-fit sm:flex-row sm:flex-wrap sm:justify-center"
             >
               {tabs.map((tab, index) => {
                 const Icon = tab.icon;
@@ -310,7 +310,7 @@ export function SampleOutputSection() {
                     tabIndex={isActive ? 0 : -1}
                     onClick={() => setActiveTab(tab.id)}
                     onKeyDown={(event) => handleKeyDown(event, index)}
-                    className={`relative flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:text-sm ${
+                    className={`relative flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:h-auto sm:min-h-0 sm:w-auto sm:justify-start sm:px-4 sm:py-3 sm:text-sm ${
                       isActive
                         ? "text-white"
                         : "text-secondary-text hover:bg-surface-muted hover:text-primary"
@@ -357,7 +357,7 @@ export function SampleOutputSection() {
             </div>
           </motion.div>
 
-          <div className="mt-8 flex items-start justify-center gap-2 text-center">
+          <div className="mt-6 flex items-start justify-center gap-2 text-center sm:mt-8">
             <CheckCircle2
               size={17}
               aria-hidden="true"

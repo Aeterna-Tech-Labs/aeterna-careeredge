@@ -2,7 +2,7 @@
 // LinkedIn OpenID Connect Callback Handler (Day 2 Part 4.1)
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSession, createSession, SESSION_COOKIE_NAME } from "@/lib/session";
+import { getSession, createSession, SESSION_COOKIE_NAME, isSecureCookie } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import {
   exchangeLinkedInCode,
@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
     const res = NextResponse.redirect(new URL("/linkedin?connected=true", req.url));
     res.cookies.set(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isSecureCookie(),
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,

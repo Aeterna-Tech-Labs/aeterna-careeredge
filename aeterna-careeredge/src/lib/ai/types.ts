@@ -52,6 +52,8 @@ export interface AiTaskRequest {
   customPrompt?: string;
   schemaDescription: string;
   userId?: string;
+  bypassCache?: boolean;
+  temperature?: number;
   documentAttachment?: {
     mimeType: string;
     base64Data: string;

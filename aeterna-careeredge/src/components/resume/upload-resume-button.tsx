@@ -84,17 +84,17 @@ export function UploadResumeButton({
     return (
       <>
         <div
-          className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-[#F2B63D] bg-[#FFF9ED] p-4 text-[#2B1B1B] shadow-2xs ${className}`}
+          className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-blue-200/80 bg-blue-50/50 p-3.5 sm:p-4 text-slate-900 shadow-2xs min-w-0 ${className}`}
         >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#7A0F1F] text-[#F2B63D] shadow-xs">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xs">
               <FileUp size={18} />
             </div>
-            <div>
-              <p className="text-xs font-bold text-[#7A0F1F]">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-slate-900 truncate">
                 {label || "Already have a resume?"}
               </p>
-              <p className="text-[11px] text-[#765F5D]">
+              <p className="text-[11px] text-slate-600 line-clamp-2">
                 {sublabel || "Upload your PDF or DOCX to auto-fill your credentials in under 30 seconds."}
               </p>
             </div>
@@ -103,7 +103,7 @@ export function UploadResumeButton({
           <button
             type="button"
             onClick={() => setModalOpen(true)}
-            className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#7A0F1F] px-4 py-2 text-xs font-bold text-white hover:bg-[#600C18] transition shadow-xs"
+            className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 transition shadow-xs w-full sm:w-auto"
           >
             <UploadCloud size={14} />
             <span>Upload Resume</span>

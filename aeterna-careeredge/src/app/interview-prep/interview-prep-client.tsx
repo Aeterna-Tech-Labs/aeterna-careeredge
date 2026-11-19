@@ -147,7 +147,7 @@ export function InterviewPrepClient({
 
   return (
     <StudentLayout userName={studentName}>
-      <div className="min-h-screen bg-[#FFF8F0]/40 p-6 md:p-8">
+      <div className="min-h-screen bg-[#FFF8F0]/40 p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -169,7 +169,7 @@ export function InterviewPrepClient({
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <Link
               href="/evidence-vault"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm"

@@ -74,7 +74,7 @@ export function HowItWorksSection() {
     <MotionConfig reducedMotion="user">
       <section
         id="how-it-works"
-        className="relative isolate scroll-mt-24 overflow-hidden bg-background py-20 sm:py-24"
+        className="relative isolate scroll-mt-24 overflow-hidden bg-background py-14 sm:py-20 lg:py-24"
       >
         {/* Soft background glow */}
         <div
@@ -94,11 +94,11 @@ export function HowItWorksSection() {
               Simple by design
             </p>
 
-            <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight text-foreground min-[375px]:text-3xl sm:text-4xl">
               Your career journey, one step at a time.
             </h2>
 
-            <p className="mt-5 text-base leading-7 text-secondary-text">
+            <p className="mt-5 text-sm leading-7 text-secondary-text sm:text-base">
               Start with one profile. Build the tools you need. Follow a clearer
               path towards your next opportunity.
             </p>
@@ -109,7 +109,7 @@ export function HowItWorksSection() {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, amount: 0.15 }}
-            className="mt-14 grid gap-8 md:grid-cols-2 md:gap-6 lg:grid-cols-4"
+            className="mt-10 grid gap-14 sm:mt-14 md:grid-cols-2 md:gap-6 lg:grid-cols-4"
           >
             {steps.map((step, index) => {
               const Icon = step.icon;
@@ -120,7 +120,7 @@ export function HowItWorksSection() {
                   variants={fadeUp}
                   whileHover={{ y: -6 }}
                   transition={spring}
-                  className="group relative rounded-3xl border border-border bg-white p-6 shadow-sm transition-[box-shadow,border-color] duration-300 hover:border-gold hover:shadow-xl"
+                  className="group relative rounded-3xl border border-border bg-white p-5 shadow-sm transition-[box-shadow,border-color] duration-300 hover:border-gold hover:shadow-xl sm:p-6"
                 >
                   {/* Accent line that grows in on hover */}
                   <div
@@ -129,16 +129,16 @@ export function HowItWorksSection() {
                   />
 
                   <div className="flex items-center justify-between">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-gold/40 bg-gold-soft text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-white">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-gold/40 bg-gold-soft text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-white sm:h-12 sm:w-12">
                       <Icon size={23} aria-hidden="true" />
                     </div>
 
-                    <span className="font-heading text-3xl font-bold text-primary/15 transition-colors duration-300 group-hover:text-gold">
+                    <span className="font-heading text-2xl font-bold text-primary/15 transition-colors duration-300 group-hover:text-gold sm:text-3xl">
                       {step.number}
                     </span>
                   </div>
 
-                  <h3 className="mt-6 font-heading text-lg font-bold text-foreground">
+                  <h3 className="mt-5 font-heading text-base font-bold text-foreground sm:mt-6 sm:text-lg">
                     {step.title}
                   </h3>
 
@@ -146,7 +146,7 @@ export function HowItWorksSection() {
                     {step.description}
                   </p>
 
-                  <ul className="mt-5 space-y-3">
+                  <ul className="mt-4 space-y-2.5 sm:mt-5 sm:space-y-3">
                     {step.points.map((point) => (
                       <li
                         key={point}
@@ -164,7 +164,7 @@ export function HowItWorksSection() {
                   {index < steps.length - 1 && (
                     <div
                       aria-hidden="true"
-                      className="absolute -bottom-7 left-1/2 z-10 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-gold/40 bg-white text-primary shadow-sm md:hidden lg:-right-4 lg:bottom-auto lg:left-auto lg:top-8 lg:flex lg:translate-x-0"
+                      className="absolute -bottom-6 left-1/2 z-10 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-gold/40 bg-white text-primary shadow-sm md:hidden lg:-right-4 lg:bottom-auto lg:left-auto lg:top-8 lg:flex lg:translate-x-0"
                     >
                       <ArrowDown size={15} className="lg:-rotate-90" />
                     </div>
@@ -179,7 +179,7 @@ export function HowItWorksSection() {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true }}
-            className="mt-10 text-center text-xs text-secondary-text"
+            className="mt-8 px-2 text-center text-xs text-secondary-text sm:mt-10"
           >
             You stay in control of your profile and decide when to seek
             additional guidance.

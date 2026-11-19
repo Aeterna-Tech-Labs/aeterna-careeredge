@@ -47,8 +47,8 @@ export const SHOWCASE_SLIDES: ToolSlide[] = [
     icon: FileText,
     href: "/resume",
     ctaText: "Open Resume Studio",
-    accentColor: "#F2B63D",
-    gradient: "from-[#4C0915] via-[#680D1D] to-[#3E0711]",
+    accentColor: "#2563EB",
+    gradient: "from-[#0B132B] via-[#0F172A] to-[#1E293B]",
     stats: "Multi-Domain Templates • Instant ATS Score",
   },
   {
@@ -62,8 +62,8 @@ export const SHOWCASE_SLIDES: ToolSlide[] = [
     icon: Fingerprint,
     href: "/passport",
     ctaText: "Manage Career Passport",
-    accentColor: "#F2B63D",
-    gradient: "from-[#3E0711] via-[#5A0C1A] to-[#4C0915]",
+    accentColor: "#2563EB",
+    gradient: "from-[#0F172A] via-[#1E293B] to-[#0B132B]",
     stats: "Full CRUD Control • Real-Time Readiness Score",
   },
   {
@@ -78,7 +78,7 @@ export const SHOWCASE_SLIDES: ToolSlide[] = [
     href: "/linkedin",
     ctaText: "Optimize LinkedIn Profile",
     accentColor: "#0A66C2",
-    gradient: "from-[#002244] via-[#0A4275] to-[#4C0915]",
+    gradient: "from-[#0B132B] via-[#0F172A] to-[#1E3A8A]",
     stats: "Keyword Placement • Recruiter Search Index",
   },
   {
@@ -92,8 +92,8 @@ export const SHOWCASE_SLIDES: ToolSlide[] = [
     icon: BriefcaseBusiness,
     href: "/jobs",
     ctaText: "Explore Matched Jobs",
-    accentColor: "#F2B63D",
-    gradient: "from-[#4C0915] via-[#751123] to-[#4A0A17]",
+    accentColor: "#2563EB",
+    gradient: "from-[#0B132B] via-[#1E293B] to-[#0F172A]",
     stats: "Tier-1 Partners • Direct Application Support",
   },
   {
@@ -107,8 +107,8 @@ export const SHOWCASE_SLIDES: ToolSlide[] = [
     icon: Zap,
     href: "/sprints",
     ctaText: "Launch 30-Day Sprint",
-    accentColor: "#F2B63D",
-    gradient: "from-[#3B0711] via-[#5E0C1B] to-[#4C0915]",
+    accentColor: "#2563EB",
+    gradient: "from-[#0F172A] via-[#0B132B] to-[#1E293B]",
     stats: "Daily Micro-Deliverables • Portfolio Growth",
   },
 ];
@@ -177,7 +177,7 @@ export function ToolShowcaseCarousel() {
     <section
       aria-label="Flagship Tools Showcase"
       data-tour="tool-showcase"
-      className="space-y-3"
+      className="space-y-3 w-full min-w-0 max-w-full overflow-hidden"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onFocusCapture={() => setIsPaused(true)}
@@ -185,14 +185,14 @@ export function ToolShowcaseCarousel() {
     >
       {/* Main Showcase Hero Card */}
       <div
-        className={`relative overflow-hidden rounded-2xl bg-gradient-to-r ${activeSlide.gradient} border border-white/15 p-6 md:p-8 text-white shadow-lg transition-all duration-300`}
+        className={`relative overflow-hidden rounded-2xl bg-gradient-to-r ${activeSlide.gradient} border border-white/15 p-6 md:p-8 text-white shadow-lg transition-all duration-300 w-full min-w-0`}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         {/* Subtle background glow */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10 blur-3xl"
+          className="pointer-events-none absolute right-0 top-0 h-64 w-64 translate-x-1/3 -translate-y-1/3 rounded-full bg-white/10 blur-3xl"
         />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -200,36 +200,36 @@ export function ToolShowcaseCarousel() {
           <div className="space-y-3.5 max-w-2xl">
             {/* Top Micro Badges */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-[#F2B63D] text-[#4C0915] shadow-xs">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-blue-600 text-white shadow-xs">
                 <BadgeIcon className="w-3.5 h-3.5" />
                 {activeSlide.badge}
               </span>
 
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-white/15 text-white/90 border border-white/20">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-white/10 text-white/90 border border-white/15">
                 {activeSlide.stats}
               </span>
             </div>
 
             {/* Headline */}
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
+              <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-sky-400">
                 {activeSlide.toolName}
               </p>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight mt-1">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white leading-tight mt-1">
                 {activeSlide.headline}
               </h2>
             </div>
 
             {/* Description */}
-            <p className="text-sm text-white/85 leading-relaxed line-clamp-2 sm:line-clamp-none">
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed line-clamp-2 md:line-clamp-none">
               {activeSlide.description}
             </p>
 
             {/* Action CTA & Quick Links */}
-            <div className="pt-2 flex flex-wrap items-center gap-3">
+            <div className="pt-2 flex flex-wrap items-center gap-2 sm:gap-3">
               <Link
                 href={activeSlide.href}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-[#F2B63D] text-[#4C0915] hover:bg-[#e2a832] active:scale-95 shadow-md transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-md shadow-blue-900/30 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 <span>{activeSlide.ctaText}</span>
                 <ArrowRight size={14} />
@@ -237,7 +237,7 @@ export function ToolShowcaseCarousel() {
 
               <Link
                 href="/passport"
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold bg-white/15 text-white hover:bg-white/25 border border-white/20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F2B63D]"
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs font-semibold bg-white/10 text-white hover:bg-white/20 border border-white/15 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]"
               >
                 <span>View Career Passport</span>
               </Link>
@@ -245,24 +245,24 @@ export function ToolShowcaseCarousel() {
           </div>
 
           {/* Right Column: Visual Tool Emblem & Slide Navigation */}
-          <div className="flex flex-row md:flex-col items-center justify-between md:justify-center gap-4 shrink-0">
-            {/* Tool Icon Emblem */}
-            <div className="flex h-20 w-20 md:h-24 md:w-24 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-inner text-[#F2B63D]">
-              <SlideIcon size={42} strokeWidth={1.8} aria-hidden="true" />
+          <div className="flex flex-row md:flex-col items-center justify-between md:justify-center gap-3 sm:gap-4 shrink-0">
+            {/* Tool Icon Emblem - Adjusted for below md screen */}
+            <div className="flex h-12 w-12 sm:h-14 sm:w-14 md:h-24 md:w-24 items-center justify-center rounded-xl md:rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 shadow-inner text-[#38BDF8]">
+              <SlideIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-11 md:w-11" strokeWidth={1.8} aria-hidden="true" />
             </div>
 
             {/* Manual Arrow Controls */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={prevSlide}
                 aria-label="Previous tool slide"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/25 border border-white/20 text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F2B63D]"
+                className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]"
               >
-                <ChevronLeft size={18} />
+                <ChevronLeft className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
               </button>
 
-              <span className="text-xs font-bold text-white/80 tabular-nums px-1">
+              <span className="text-[11px] sm:text-xs font-bold text-white/80 tabular-nums px-1">
                 {currentIndex + 1} / {SHOWCASE_SLIDES.length}
               </span>
 
@@ -270,16 +270,16 @@ export function ToolShowcaseCarousel() {
                 type="button"
                 onClick={nextSlide}
                 aria-label="Next tool slide"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/25 border border-white/20 text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F2B63D]"
+                className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]"
               >
-                <ChevronRight size={18} />
+                <ChevronRight className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
               </button>
             </div>
           </div>
         </div>
 
         {/* Bottom Pagination Dots & Progress Line */}
-        <div className="mt-6 pt-4 border-t border-white/15 flex items-center justify-between">
+        <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
           {/* Dot Indicators */}
           <div className="flex items-center gap-2">
             {SHOWCASE_SLIDES.map((slide, idx) => (
@@ -288,10 +288,10 @@ export function ToolShowcaseCarousel() {
                 type="button"
                 onClick={() => goToSlide(idx)}
                 aria-label={`Go to slide ${idx + 1}: ${slide.toolName}`}
-                className={`transition-all duration-300 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F2B63D] ${
+                className={`transition-all duration-300 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] ${
                   idx === currentIndex
-                    ? "w-8 h-2 bg-[#F2B63D]"
-                    : "w-2 h-2 bg-white/30 hover:bg-white/60"
+                    ? "w-8 h-2 bg-[#38BDF8]"
+                    : "w-2 h-2 bg-white/25 hover:bg-white/50"
                 }`}
               />
             ))}
@@ -304,29 +304,31 @@ export function ToolShowcaseCarousel() {
       </div>
 
       {/* Quick Jump Tool Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-text shrink-0 pl-1">
-          Quick Jump:
-        </span>
-        {SHOWCASE_SLIDES.map((slide, idx) => {
-          const Icon = slide.icon;
-          const isActive = idx === currentIndex;
-          return (
-            <button
-              key={slide.id}
-              type="button"
-              onClick={() => goToSlide(idx)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                isActive
-                  ? "bg-[#4C0915] text-[#F2B63D] font-bold shadow-xs"
-                  : "bg-surface-card border border-border text-secondary-text hover:bg-surface-muted hover:text-foreground"
-              }`}
-            >
-              <Icon size={13} className={isActive ? "text-[#F2B63D]" : "text-muted-text"} />
-              <span>{slide.toolName.split("&")[0].trim()}</span>
-            </button>
-          );
-        })}
+      <div className="w-full min-w-0 max-w-full overflow-hidden">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none w-full min-w-0 touch-momentum">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-text shrink-0 pl-1">
+            Quick Jump:
+          </span>
+          {SHOWCASE_SLIDES.map((slide, idx) => {
+            const Icon = slide.icon;
+            const isActive = idx === currentIndex;
+            return (
+              <button
+                key={slide.id}
+                type="button"
+                onClick={() => goToSlide(idx)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  isActive
+                    ? "bg-[#4C0915] text-[#F2B63D] font-bold shadow-xs"
+                    : "bg-surface-card border border-border text-secondary-text hover:bg-surface-muted hover:text-foreground"
+                }`}
+              >
+                <Icon size={13} className={isActive ? "text-[#F2B63D]" : "text-muted-text"} />
+                <span>{slide.toolName.split("&")[0].trim()}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

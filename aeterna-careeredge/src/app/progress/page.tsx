@@ -1,15 +1,8 @@
 // src/app/progress/page.tsx
-// Immutable Student Progress Ledger & Audit History
+// Progress Ledger has been decommissioned per user direction. Redirects to /dashboard.
 
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/session";
-import { ProgressClient } from "./progress-client";
 
-export default async function ProgressPage() {
-  const session = await getSession();
-  if (!session) {
-    redirect("/login");
-  }
-
-  return <ProgressClient studentName={session.name || "Student"} />;
+export default function ProgressPage() {
+  redirect("/dashboard");
 }

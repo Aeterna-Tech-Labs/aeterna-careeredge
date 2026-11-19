@@ -34,14 +34,14 @@ export function PageHeader({
   className = "",
 }: PageHeaderProps) {
   return (
-    <header className={`space-y-2 pb-5 border-b border-[#EBDDD1] ${className}`}>
+    <header className={`space-y-2 pb-5 border-b border-slate-200 ${className}`}>
       {/* Category / Breadcrumbs / Back Link */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#7A0F1F]">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-blue-600">
           {backHref && (
             <Link
               href={backHref}
-              className="inline-flex items-center gap-1 font-bold text-[#765F5D] hover:text-[#7A0F1F] transition-colors mr-2"
+              className="inline-flex items-center gap-1 font-bold text-slate-500 hover:text-blue-600 transition-colors mr-2"
             >
               <ArrowLeft size={13} aria-hidden="true" />
               <span>{backLabel}</span>
@@ -55,11 +55,11 @@ export function PageHeader({
           <button
             type="button"
             onClick={onOpenGuide}
-            className="inline-flex items-center gap-1 rounded-lg border border-[#EBDDD1] bg-white px-2.5 py-1 text-xs font-semibold text-[#765F5D] hover:bg-[#FFF9ED] hover:text-[#7A0F1F] transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7A0F1F]"
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
             title="How this tool works"
             aria-label="Open tool guide"
           >
-            <HelpCircle size={13} className="text-[#F2B63D]" />
+            <HelpCircle size={13} className="text-amber-500" />
             <span className="hidden sm:inline">How this works</span>
           </button>
         )}
@@ -68,10 +68,10 @@ export function PageHeader({
       {/* Main Title & Action Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1 min-w-0">
-          <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight text-[#2B1B1B]">
+          <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
             {title}
           </h1>
-          <p className="text-xs sm:text-sm text-[#765F5D] leading-relaxed max-w-2xl">
+          <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-2xl">
             {description}
           </p>
         </div>

@@ -48,9 +48,17 @@ import {
   Trash2,
   Sparkles,
   Award,
+  Loader2,
 } from "lucide-react";
 
 interface PassportClientProps {
+  stagedLinkedIn?: {
+    skills: string[];
+    educations: Array<{ degree: string; institution: string; year?: string }>;
+    experiences: Array<{ title: string; company: string; duration?: string; description?: string }>;
+    headline?: string | null;
+    provenance: string;
+  } | null;
   user: {
     name: string;
     email: string;
@@ -76,7 +84,19 @@ interface PassportClientProps {
   };
 }
 
-export function PassportClient({ user: initialUser }: PassportClientProps) {
+function cleanBulletText(text?: string | null): string {
+  if (!text) return "";
+  return text
+    .replace(/\u00e2\u20ac\u00a2/g, "•")
+    .replace(/[\u00e2\u0080\u00a2]/g, "•")
+    .replace(/\u00e2\u20ac\u201c/g, "–")
+    .replace(/\u00e2\u20ac\u201d/g, "—")
+    .replace(/\s*[\u00e2\u00c2]\s*/g, " – ")
+    .replace(/\uFFFD/g, "•")
+    .trim();
+}
+
+export function PassportClient({ user: initialUser, stagedLinkedIn }: PassportClientProps) {
   // Local state for interactive real-time updates
   const [userName, setUserName] = useState(initialUser.name);
   const [userMobile, setUserMobile] = useState(initialUser.mobile);
@@ -87,6 +107,9 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
   const [experiences, setExperiences] = useState<ExperienceItem[]>(initialUser.experiences);
   const [certifications, setCertifications] = useState<CertificationItem[]>(initialUser.certifications);
   const [score, setScore] = useState(initialUser.profile?.passportScore ?? 75);
+
+  const [mergingLinkedIn, setMergingLinkedIn] = useState(false);
+  const [linkedInMerged, setLinkedInMerged] = useState(false);
 
   // Modal visibility states
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -127,6 +150,33 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
       notify((err as Error).message || "Could not consolidate entries.");
     } finally {
       setDeduplicating(false);
+    }
+  }
+
+  async function handleMergeLinkedIn() {
+    if (!stagedLinkedIn) return;
+    setMergingLinkedIn(true);
+    try {
+      const res = await fetch("/api/linkedin/merge-to-passport", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          approvedSkills: stagedLinkedIn.skills || [],
+          approvedEducations: stagedLinkedIn.educations || [],
+          approvedExperiences: stagedLinkedIn.experiences || [],
+          headline: stagedLinkedIn.headline || undefined,
+          provenance: stagedLinkedIn.provenance || "LINKEDIN_PDF",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to merge LinkedIn data.");
+      setLinkedInMerged(true);
+      notify(data.message || "Successfully merged LinkedIn records into Career Passport!");
+      setTimeout(() => window.location.reload(), 1200);
+    } catch (err: unknown) {
+      notify((err as Error).message || "Could not merge LinkedIn data.");
+    } finally {
+      setMergingLinkedIn(false);
     }
   }
 
@@ -217,114 +267,113 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
 
   return (
     <StudentLayout userName={userName}>
-      <div className="min-h-screen bg-[#FFF8F0]/40 p-6 md:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
-          {/* Status notification toast */}
-          {statusMessage && (
-            <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-[#4C0915] px-4 py-3 text-xs font-semibold text-white shadow-xl border border-[#F2B63D]/30 transition-all animate-in fade-in slide-in-from-bottom-2">
-              <Sparkles size={15} className="text-[#F2B63D]" />
-              <span>{statusMessage}</span>
-            </div>
-          )}
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Status notification toast */}
+        {statusMessage && (
+          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-xs font-semibold text-white shadow-xl border border-slate-700 transition-all animate-in fade-in slide-in-from-bottom-2">
+            <Sparkles size={15} className="text-amber-400" />
+            <span>{statusMessage}</span>
+          </div>
+        )}
 
-          {/* Header Banner */}
-          <div className="rounded-2xl bg-gradient-to-r from-[#4C0915] via-[#7A0F1F] to-[#5D0B18] p-6 md:p-8 text-white shadow-md">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-              <div className="space-y-2">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#F2B63D] text-[#4C0915]">
-                  <Fingerprint className="w-3.5 h-3.5" />
-                  Universal Career Passport • Verified Source of Truth
-                </div>
-                <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-                  {userName}&apos;s Career Passport
-                </h1>
-                <p className="text-sm text-white/80 max-w-xl">
-                  Centralized, tamper-resistant career record aggregating your academic history, competencies, and proof-backed achievements.
-                </p>
-
-                {profile?.institution && (
-                  <div className="flex items-center gap-2 text-xs text-white/70 pt-1">
-                    <MapPin size={13} />
-                    <span>
-                      {profile.institution} • {profile.course || profile.academicDomain}
-                    </span>
-                    {profile.gradeValue && (
-                      <span className="bg-white/15 px-2 py-0.5 rounded-md font-semibold text-white">
-                        {profile.gradingType || "Grade"}: {profile.gradeValue}
-                      </span>
-                    )}
-                  </div>
-                )}
+        {/* Header Banner */}
+        <div className="rounded-2xl sm:rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-4 sm:p-6 md:p-8 text-white shadow-card border border-slate-800/80">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 sm:gap-6">
+            <div className="space-y-1.5 sm:space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-bold bg-amber-400 text-slate-950 shadow-xs">
+                <Fingerprint className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                <span className="hidden sm:inline">Universal Career Passport • Verified Source of Truth</span>
+                <span className="sm:hidden">Career Passport • Verified</span>
               </div>
+              <h1 className="text-xl sm:text-2xl md:text-3.5xl font-extrabold tracking-tight">
+                {userName}&apos;s Career Passport
+              </h1>
+              {/* Simplified: Hidden on mobile (<md) to keep card simple and focused */}
+              <p className="hidden md:block text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
+                Centralized, tamper-resistant career record aggregating your academic history, competencies, and proof-backed achievements.
+              </p>
 
-              {/* Score Card & Edit Master Profile Button */}
-              <div className="flex flex-col items-center gap-3 shrink-0">
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 text-center min-w-[190px]">
-                  <div className="text-4xl font-black text-[#F2B63D]">{score}%</div>
-                  <div className="text-xs font-bold uppercase tracking-wider text-white/90 mt-1">
+              {profile?.institution && (
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs text-slate-300 pt-0.5 sm:pt-1">
+                  <MapPin size={13} className="text-amber-400 shrink-0" />
+                  <span className="truncate">
+                    {profile.institution} • {profile.course || profile.academicDomain}
+                  </span>
+                  {profile.gradeValue && (
+                    <span className="bg-white/15 px-2 py-0.5 rounded-md font-semibold text-white text-[11px]">
+                      {profile.gradingType || "Grade"}: {profile.gradeValue}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Score Card & Edit Master Profile Button - Streamlined for below md */}
+            <div className="flex flex-col sm:flex-row md:flex-col items-center justify-between gap-2.5 sm:gap-3 w-full md:w-auto shrink-0">
+              <div className="bg-white/10 backdrop-blur-md rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-5 border border-white/15 text-center flex md:flex-col items-center justify-between md:justify-center gap-3 w-full md:min-w-[190px]">
+                <div className="flex items-center gap-2 md:flex-col md:gap-0">
+                  <div className="text-2xl sm:text-3xl md:text-4xl font-black text-amber-400">{score}%</div>
+                  <div className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-slate-200 md:mt-1">
                     Passport Readiness
                   </div>
-                  <div className="text-[11px] text-white/70 mt-0.5">
-                    {score >= 75 ? "Strongly Proofed" : "Getting Started"}
-                  </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setProfileModalOpen(true)}
-                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-white/20 hover:bg-white/30 text-white border border-white/25 shadow-xs transition"
-                >
-                  <Pencil size={13} />
-                  <span>Edit Master Profile</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Action Buttons */}
-            <div className="mt-6 pt-5 border-t border-white/15 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-2.5">
-                <Link
-                  href="/resume"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-[#F2B63D] text-[#4C0915] hover:bg-[#e0a632] shadow-sm transition"
-                >
-                  <FileText size={13} />
-                  <span>Create Tailored Resume</span>
-                </Link>
-                <Link
-                  href="/evidence-vault"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-white/15 text-white hover:bg-white/25 border border-white/20 transition"
-                >
-                  <ShieldCheck size={13} />
-                  <span>Upload Evidence ({initialUser.documentCount} Files)</span>
-                </Link>
-                <Link
-                  href="/truth-check"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-white/15 text-white hover:bg-white/25 border border-white/20 transition"
-                >
-                  <CheckCheck size={13} />
-                  <span>Run Truth Check</span>
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleDeduplicate}
-                  disabled={deduplicating}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-white/15 text-white hover:bg-white/25 border border-white/20 transition disabled:opacity-50"
-                  title="Deduplicate and consolidate redundant passport entries"
-                >
-                  <Sparkles size={13} className="text-[#F2B63D]" />
-                  <span>{deduplicating ? "Consolidating..." : "Clean Duplicates"}</span>
-                </button>
+                <div className="text-[10px] sm:text-[11px] text-slate-300 md:mt-0.5">
+                  {score >= 75 ? "Strongly Proofed" : "Getting Started"}
+                </div>
               </div>
 
-              {/* Direct Link to Onboarding Form Editor */}
-              <Link
-                href="/onboarding?from=dashboard"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#F2B63D] hover:underline"
+              <button
+                type="button"
+                onClick={() => setProfileModalOpen(true)}
+                className="w-full inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold bg-white/15 hover:bg-white/25 text-white border border-white/20 shadow-xs transition"
               >
-                <span>Full Onboarding Wizard Edit &rarr;</span>
-              </Link>
+                <Pencil size={13} />
+                <span>Edit Master Profile</span>
+              </button>
             </div>
           </div>
+
+          {/* Quick Action Buttons - Simple layout on mobile */}
+          <div className="mt-4 sm:mt-6 pt-3.5 sm:pt-5 border-t border-white/10 flex flex-wrap items-center justify-between gap-2.5">
+            <div className="flex flex-wrap gap-2 sm:gap-2.5 w-full sm:w-auto">
+              <Link
+                href="/resume"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold bg-amber-400 text-slate-950 hover:bg-amber-300 shadow-sm transition"
+              >
+                <FileText size={13} />
+                <span className="hidden sm:inline">Create Tailored Resume</span>
+                <span className="sm:hidden">Create Resume</span>
+              </Link>
+              <Link
+                href="/evidence-vault"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold bg-white/15 text-white hover:bg-white/25 border border-white/20 transition truncate"
+              >
+                <ShieldCheck size={13} />
+                <span className="hidden sm:inline">Upload Evidence ({initialUser.documentCount} Files)</span>
+                <span className="sm:hidden truncate">Evidence ({initialUser.documentCount})</span>
+              </Link>
+              <button
+                type="button"
+                onClick={handleDeduplicate}
+                disabled={deduplicating}
+                className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-semibold bg-white/15 text-white hover:bg-white/25 border border-white/20 transition disabled:opacity-50"
+                title="Deduplicate and consolidate redundant passport entries"
+              >
+                <Sparkles size={13} className="text-amber-300" />
+                <span className="hidden sm:inline">{deduplicating ? "Consolidating..." : "Clean Duplicates"}</span>
+                <span className="sm:hidden">{deduplicating ? "Cleaning..." : "Clean"}</span>
+              </button>
+            </div>
+
+            {/* Direct Link to Onboarding Form Editor */}
+            <Link
+              href="/onboarding?from=dashboard"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-300 hover:text-amber-200 hover:underline"
+            >
+              <span>Full Onboarding Wizard Edit &rarr;</span>
+            </Link>
+          </div>
+        </div>
 
           {/* Guidance Helper */}
           <HowItWorksPanel toolKey="career-passport" />
@@ -337,17 +386,78 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
             onSuccess={() => window.location.reload()}
           />
 
+          {/* LinkedIn Staged Import Banner (if available) */}
+          {stagedLinkedIn && (() => {
+            const unmergedSkills =
+              stagedLinkedIn.skills.filter(
+                (name) => !skills.some((s) => s.name.toLowerCase() === name.toLowerCase())
+              );
+            const unmergedExps =
+              stagedLinkedIn.experiences.filter(
+                (e) => !experiences.some((exp) => exp.companyName.toLowerCase() === e.company.toLowerCase())
+              );
+            const unmergedEdus =
+              stagedLinkedIn.educations.filter(
+                (edu) => !educations.some((e) => e.institution.toLowerCase() === edu.institution.toLowerCase())
+              );
+            const totalUnmerged = unmergedSkills.length + unmergedExps.length + unmergedEdus.length;
+
+            if (totalUnmerged <= 0 && !linkedInMerged) return null;
+
+            return (
+              <div className="rounded-2xl border border-emerald-300 bg-emerald-50/80 p-5 shadow-xs transition">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-200 text-emerald-900 uppercase tracking-wide">
+                      <Sparkles size={12} />
+                      LinkedIn Import Data Available
+                    </div>
+                    <h3 className="text-sm font-bold text-emerald-950">
+                      Sync Verified LinkedIn Records to Career Passport
+                    </h3>
+                    <p className="text-xs text-emerald-800">
+                      Found {unmergedSkills.length} skills, {unmergedExps.length} positions, and {unmergedEdus.length} education records ready to consolidate into your permanent Career Passport.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={mergingLinkedIn || linkedInMerged}
+                    onClick={handleMergeLinkedIn}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-800 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-900 shadow-xs transition disabled:opacity-50 shrink-0"
+                  >
+                    {mergingLinkedIn ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        <span>Merging...</span>
+                      </>
+                    ) : linkedInMerged ? (
+                      <>
+                        <ShieldCheck size={14} className="text-emerald-300" />
+                        <span>Merged to Passport!</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck size={14} />
+                        <span>Merge All ({totalUnmerged} Records)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Grid of Passport Sections */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* ============================================================
                 1. EDUCATION HISTORY
             ============================================================ */}
-            <div className="bg-white rounded-2xl border border-stone-200 p-6 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                <div className="flex items-center gap-2 font-bold text-gray-900">
-                  <GraduationCap className="text-[#7A0F1F] w-5 h-5" />
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 space-y-4 shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2 font-bold text-slate-900">
+                  <GraduationCap className="text-blue-600 w-5 h-5" />
                   <h2>Education History</h2>
-                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-semibold text-stone-600">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-700">
                     {educations.length}
                   </span>
                 </div>
@@ -358,7 +468,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                     setActiveEducation(null);
                     setEducationModalOpen(true);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#7A0F1F] text-white hover:bg-[#4C0915] shadow-xs transition"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-xs transition"
                 >
                   <Plus size={13} />
                   <span>Add Degree</span>
@@ -370,14 +480,14 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                   {educations.map((edu) => (
                     <div
                       key={edu.id}
-                      className="group relative p-3.5 rounded-xl bg-stone-50 border border-stone-200/80 space-y-1 hover:border-[#7A0F1F]/40 transition"
+                      className="group relative p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-1 hover:border-blue-400/50 transition"
                     >
-                      <div className="flex items-start justify-between text-xs font-bold text-gray-900 pr-16">
+                      <div className="flex items-start justify-between text-xs font-bold text-slate-900 pr-16">
                         <div>
-                          <span>{edu.degree}</span>
+                          <span>{cleanBulletText(edu.degree)}</span>
                           {edu.fieldOfStudy && (
-                            <span className="text-stone-500 font-normal">
-                              {" "}• {edu.fieldOfStudy}
+                            <span className="text-slate-500 font-normal">
+                              {" "}• {cleanBulletText(edu.fieldOfStudy)}
                             </span>
                           )}
                         </div>
@@ -388,11 +498,11 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                         )}
                       </div>
 
-                      <div className="text-xs text-stone-600 font-medium">
-                        {edu.institution}
+                      <div className="text-xs text-slate-600 font-medium">
+                        {cleanBulletText(edu.institution)}
                       </div>
 
-                      <div className="text-[11px] text-stone-400">
+                      <div className="text-[11px] text-slate-400">
                         {edu.startDate} — {edu.endDate || "Present"}
                       </div>
 
@@ -405,7 +515,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                             setEducationModalOpen(true);
                           }}
                           aria-label={`Edit ${edu.degree}`}
-                          className="p-1 rounded-lg text-stone-500 hover:bg-stone-200 hover:text-stone-900 transition"
+                          className="p-1 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-900 transition"
                         >
                           <Pencil size={13} />
                         </button>
@@ -423,7 +533,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                   ))}
                 </div>
               ) : (
-                <div className="p-6 rounded-xl bg-stone-50 text-center text-xs text-stone-500 space-y-2">
+                <div className="p-6 rounded-xl bg-slate-50 text-center text-xs text-slate-500 space-y-2">
                   <p>No education records logged yet.</p>
                   <button
                     type="button"
@@ -431,7 +541,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                       setActiveEducation(null);
                       setEducationModalOpen(true);
                     }}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-[#7A0F1F] hover:underline"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
                   >
                     <Plus size={13} />
                     <span>Add your degree or diploma</span>
@@ -443,12 +553,12 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
             {/* ============================================================
                 2. SKILLS & COMPETENCIES
             ============================================================ */}
-            <div className="bg-white rounded-2xl border border-stone-200 p-6 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                <div className="flex items-center gap-2 font-bold text-gray-900">
-                  <Code className="text-[#7A0F1F] w-5 h-5" />
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 space-y-4 shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2 font-bold text-slate-900">
+                  <Code className="text-blue-600 w-5 h-5" />
                   <h2>Skills &amp; Competencies</h2>
-                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-semibold text-stone-600">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-700">
                     {skills.length}
                   </span>
                 </div>
@@ -456,7 +566,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                 <button
                   type="button"
                   onClick={() => setSkillModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#7A0F1F] text-white hover:bg-[#4C0915] shadow-xs transition"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-xs transition"
                 >
                   <Plus size={13} />
                   <span>Add Skill</span>
@@ -468,11 +578,11 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                   {skills.map((skill) => (
                     <div
                       key={skill.id || skill.name}
-                      className="group inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-[#FFF9ED] text-[#7A0F1F] border border-[#EBDDD1] hover:border-[#7A0F1F] transition"
+                      className="group inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-slate-100/90 hover:bg-slate-200/80 text-slate-800 border border-slate-200/80 hover:border-blue-400 transition"
                     >
                       <span>{skill.name}</span>
                       {skill.level && (
-                        <span className="text-[10px] text-[#7A0F1F]/60 uppercase font-bold">
+                        <span className="text-[10px] text-blue-600 uppercase font-bold">
                           • {skill.level.slice(0, 3)}
                         </span>
                       )}
@@ -480,7 +590,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                         type="button"
                         onClick={() => skill.id && handleDeleteSkill(skill.id)}
                         aria-label={`Remove skill ${skill.name}`}
-                        className="ml-1 text-stone-400 hover:text-red-600 transition"
+                        className="ml-1 text-slate-400 hover:text-red-600 transition"
                       >
                         &times;
                       </button>
@@ -488,12 +598,12 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                   ))}
                 </div>
               ) : (
-                <div className="p-6 rounded-xl bg-stone-50 text-center text-xs text-stone-500 space-y-2">
+                <div className="p-6 rounded-xl bg-slate-50 text-center text-xs text-slate-500 space-y-2">
                   <p>No skills recorded yet.</p>
                   <button
                     type="button"
                     onClick={() => setSkillModalOpen(true)}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-[#7A0F1F] hover:underline"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
                   >
                     <Plus size={13} />
                     <span>Add your first technical or domain skill</span>
@@ -505,12 +615,12 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
             {/* ============================================================
                 3. PRACTICAL PROJECTS & PORTFOLIO
             ============================================================ */}
-            <div className="bg-white rounded-2xl border border-stone-200 p-6 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                <div className="flex items-center gap-2 font-bold text-gray-900">
-                  <FolderGit2 className="text-[#7A0F1F] w-5 h-5" />
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 space-y-4 shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2 font-bold text-slate-900">
+                  <FolderGit2 className="text-blue-600 w-5 h-5" />
                   <h2>Practical Projects</h2>
-                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-semibold text-stone-600">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-700">
                     {projects.length}
                   </span>
                 </div>
@@ -521,7 +631,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                     setActiveProject(null);
                     setProjectModalOpen(true);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#7A0F1F] text-white hover:bg-[#4C0915] shadow-xs transition"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-xs transition"
                 >
                   <Plus size={13} />
                   <span>Add Project</span>
@@ -533,13 +643,13 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                   {projects.map((proj) => (
                     <div
                       key={proj.id}
-                      className="group relative p-3.5 rounded-xl bg-stone-50 border border-stone-200/80 space-y-1.5 hover:border-[#7A0F1F]/40 transition"
+                      className="group relative p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-1.5 hover:border-blue-400/50 transition"
                     >
-                      <div className="flex items-start justify-between text-xs font-bold text-gray-900 pr-16">
+                      <div className="flex items-start justify-between text-xs font-bold text-slate-900 pr-16">
                         <div>
-                          <span>{proj.title}</span>
+                          <span>{cleanBulletText(proj.title)}</span>
                           {proj.role && (
-                            <span className="text-stone-500 font-normal">
+                            <span className="text-slate-500 font-normal">
                               {" "}• {proj.role}
                             </span>
                           )}
@@ -550,7 +660,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                             href={proj.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[#7A0F1F] hover:underline inline-flex items-center gap-1 font-semibold"
+                            className="text-blue-600 hover:underline inline-flex items-center gap-1 font-semibold"
                           >
                             <span>Live</span>
                             <ExternalLink size={11} />
@@ -559,14 +669,14 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                       </div>
 
                       {proj.technologies && (
-                        <div className="text-[11px] font-semibold text-[#7A0F1F]/80">
+                        <div className="text-[11px] font-semibold text-blue-600">
                           {proj.technologies}
                         </div>
                       )}
 
                       {proj.description && (
-                        <div className="text-xs text-stone-600 line-clamp-2">
-                          {proj.description}
+                        <div className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                          {cleanBulletText(proj.description)}
                         </div>
                       )}
 
@@ -579,7 +689,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                             setProjectModalOpen(true);
                           }}
                           aria-label={`Edit ${proj.title}`}
-                          className="p-1 rounded-lg text-stone-500 hover:bg-stone-200 hover:text-stone-900 transition"
+                          className="p-1 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-900 transition"
                         >
                           <Pencil size={13} />
                         </button>
@@ -597,7 +707,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                   ))}
                 </div>
               ) : (
-                <div className="p-6 rounded-xl bg-stone-50 text-center text-xs text-stone-500 space-y-2">
+                <div className="p-6 rounded-xl bg-slate-50 text-center text-xs text-slate-500 space-y-2">
                   <p>No practical projects logged yet.</p>
                   <button
                     type="button"
@@ -605,7 +715,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                       setActiveProject(null);
                       setProjectModalOpen(true);
                     }}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-[#7A0F1F] hover:underline"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
                   >
                     <Plus size={13} />
                     <span>Add your capstone, software, or case study project</span>
@@ -617,12 +727,12 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
             {/* ============================================================
                 4. WORK EXPERIENCE & INTERNSHIPS
             ============================================================ */}
-            <div className="bg-white rounded-2xl border border-stone-200 p-6 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                <div className="flex items-center gap-2 font-bold text-gray-900">
-                  <Briefcase className="text-[#7A0F1F] w-5 h-5" />
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 space-y-4 shadow-card">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2 font-bold text-slate-900">
+                  <Briefcase className="text-blue-600 w-5 h-5" />
                   <h2>Experiences &amp; Internships</h2>
-                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-semibold text-stone-600">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-700">
                     {experiences.length}
                   </span>
                 </div>
@@ -633,7 +743,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                     setActiveExperience(null);
                     setExperienceModalOpen(true);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#7A0F1F] text-white hover:bg-[#4C0915] shadow-xs transition"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-xs transition"
                 >
                   <Plus size={13} />
                   <span>Add Experience</span>
@@ -645,25 +755,25 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                   {experiences.map((exp) => (
                     <div
                       key={exp.id}
-                      className="group relative p-3.5 rounded-xl bg-stone-50 border border-stone-200/80 space-y-1 hover:border-[#7A0F1F]/40 transition"
+                      className="group relative p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-1 hover:border-blue-400/50 transition"
                     >
-                      <div className="text-xs font-bold text-gray-900 pr-16">
-                        {exp.jobTitle}
+                      <div className="text-xs font-bold text-slate-900 pr-16">
+                        {cleanBulletText(exp.jobTitle)}
                       </div>
-                      <div className="text-xs text-stone-600 font-medium">
-                        {exp.companyName}
+                      <div className="text-xs text-slate-600 font-medium">
+                        {cleanBulletText(exp.companyName)}
                         {exp.employmentType && (
-                          <span className="text-stone-400 font-normal">
+                          <span className="text-slate-400 font-normal">
                             {" "}• {exp.employmentType.replace("_", " ")}
                           </span>
                         )}
                       </div>
-                      <div className="text-[11px] text-stone-400">
+                      <div className="text-[11px] text-slate-400">
                         {exp.startDate} — {exp.endDate || "Present"}
                       </div>
                       {exp.description && (
-                        <div className="text-xs text-stone-600 pt-1 line-clamp-2">
-                          {exp.description}
+                        <div className="text-xs text-slate-600 pt-1 line-clamp-2 leading-relaxed">
+                          {cleanBulletText(exp.description)}
                         </div>
                       )}
 
@@ -676,7 +786,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                             setExperienceModalOpen(true);
                           }}
                           aria-label={`Edit ${exp.jobTitle}`}
-                          className="p-1 rounded-lg text-stone-500 hover:bg-stone-200 hover:text-stone-900 transition"
+                          className="p-1 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-900 transition"
                         >
                           <Pencil size={13} />
                         </button>
@@ -694,7 +804,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                   ))}
                 </div>
               ) : (
-                <div className="p-6 rounded-xl bg-stone-50 text-center text-xs text-stone-500 space-y-2">
+                <div className="p-6 rounded-xl bg-slate-50 text-center text-xs text-slate-500 space-y-2">
                   <p>No work experiences logged yet.</p>
                   <button
                     type="button"
@@ -702,7 +812,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                       setActiveExperience(null);
                       setExperienceModalOpen(true);
                     }}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-[#7A0F1F] hover:underline"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
                   >
                     <Plus size={13} />
                     <span>Add internship, articleship, or job experience</span>
@@ -714,12 +824,12 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
             {/* ============================================================
                 5. CERTIFICATIONS & CREDENTIALS
             ============================================================ */}
-            <div className="bg-white rounded-2xl border border-stone-200 p-6 space-y-4 shadow-xs md:col-span-2">
-              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                <div className="flex items-center gap-2 font-bold text-gray-900">
-                  <Award className="text-[#7A0F1F] w-5 h-5" />
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 space-y-4 shadow-card md:col-span-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2 font-bold text-slate-900">
+                  <Award className="text-blue-600 w-5 h-5" />
                   <h2>Certifications &amp; Professional Credentials</h2>
-                  <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-semibold text-stone-600">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-700">
                     {certifications.length}
                   </span>
                 </div>
@@ -730,7 +840,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                     setActiveCertification(null);
                     setCertificationModalOpen(true);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#7A0F1F] text-white hover:bg-[#4C0915] shadow-xs transition"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 shadow-xs transition"
                 >
                   <Plus size={13} />
                   <span>Add Certification</span>
@@ -742,16 +852,16 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                   {certifications.map((cert) => (
                     <div
                       key={cert.id}
-                      className="group relative p-3.5 rounded-xl bg-stone-50 border border-stone-200/80 space-y-1 hover:border-[#7A0F1F]/40 transition"
+                      className="group relative p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/80 space-y-1 hover:border-blue-400/50 transition"
                     >
-                      <div className="text-xs font-bold text-gray-900 pr-14">
-                        {cert.name}
+                      <div className="text-xs font-bold text-slate-900 pr-14">
+                        {cleanBulletText(cert.name)}
                       </div>
-                      <div className="text-xs text-stone-600 font-medium">
-                        {cert.issuingOrg}
+                      <div className="text-xs text-slate-600 font-medium">
+                        {cleanBulletText(cert.issuingOrg)}
                       </div>
                       {cert.issueDate && (
-                        <div className="text-[11px] text-stone-400">
+                        <div className="text-[11px] text-slate-400">
                           Issued: {cert.issueDate}
                         </div>
                       )}
@@ -760,7 +870,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                           href={cert.credentialUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-[#7A0F1F] hover:underline inline-flex items-center gap-1 text-[11px] font-semibold pt-1"
+                          className="text-blue-600 hover:underline inline-flex items-center gap-1 text-[11px] font-semibold pt-1"
                         >
                           <span>Verify Credential</span>
                           <ExternalLink size={10} />
@@ -776,7 +886,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                             setCertificationModalOpen(true);
                           }}
                           aria-label={`Edit ${cert.name}`}
-                          className="p-1 rounded-lg text-stone-500 hover:bg-stone-200 hover:text-stone-900 transition"
+                          className="p-1 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-900 transition"
                         >
                           <Pencil size={13} />
                         </button>
@@ -794,7 +904,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                   ))}
                 </div>
               ) : (
-                <div className="p-6 rounded-xl bg-stone-50 text-center text-xs text-stone-500 space-y-2">
+                <div className="p-6 rounded-xl bg-slate-50 text-center text-xs text-slate-500 space-y-2">
                   <p>No verified certifications added yet.</p>
                   <button
                     type="button"
@@ -802,7 +912,7 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
                       setActiveCertification(null);
                       setCertificationModalOpen(true);
                     }}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-[#7A0F1F] hover:underline"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
                   >
                     <Plus size={13} />
                     <span>Add your NPTEL, AWS, Coursera, or professional license</span>
@@ -812,7 +922,6 @@ export function PassportClient({ user: initialUser }: PassportClientProps) {
             </div>
           </div>
         </div>
-      </div>
 
       {/* Profile Modal */}
       {profileModalOpen && (

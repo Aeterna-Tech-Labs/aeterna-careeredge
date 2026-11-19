@@ -181,6 +181,14 @@ export function ResumeListClient({ user, initialResumes }: ResumeListClientProps
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              href="/resume/studio"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#F2B63D]/60 bg-gradient-to-r from-[#FFF8F0] to-[#FFFDF9] px-3.5 py-2.5 text-xs font-bold text-[#7A0F1F] hover:bg-[#FBE4E4]/30 transition shadow-2xs"
+            >
+              <Sparkles size={14} className="text-[#F2B63D]" />
+              <span>Resume Studio (3 AI Strategies)</span>
+            </Link>
+
             <button
               type="button"
               onClick={() => setShowUploadedDrawer(true)}
@@ -206,6 +214,38 @@ export function ResumeListClient({ user, initialResumes }: ResumeListClientProps
 
         {/* Guidance Panel */}
         <HowItWorksPanel toolKey="resume-builder" />
+
+        {/* Resume Studio Feature Banner */}
+        <div className="relative overflow-hidden rounded-2xl border border-[#F2B63D]/50 bg-gradient-to-r from-[#FFF8F0] via-[#FFFDF9] to-[#FFF8F0] p-5 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#7A0F1F] text-[#F2B63D] shadow-sm">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-extrabold text-[#2B1B1B]">
+                    New: Multi-Strategy AI Resume Studio
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F2B63D]/20 text-[#8C5A08] border border-[#F2B63D]/40">
+                    Feature Update
+                  </span>
+                </div>
+                <p className="text-xs text-[#5A4747] mt-0.5 max-w-xl">
+                  Upload an existing resume or pick a target prompt (e.g. &ldquo;Make a resume for full stack developer&rdquo;). AI builds 3 strategic options: ATS-First, Impact-First, and Concise 1-Page with honest gap analysis.
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href="/resume/studio"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#7A0F1F] px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-[#4C0915] transition shrink-0"
+            >
+              <span>Try Resume Studio</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </div>
 
         {/* Error notification */}
         {errorMessage && (

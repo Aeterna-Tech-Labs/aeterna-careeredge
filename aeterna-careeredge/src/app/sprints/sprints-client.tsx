@@ -134,7 +134,7 @@ export function SprintsClient({
               30-Day Employability Sprint
             </h1>
             <p className="text-sm text-gray-700 mt-1 max-w-3xl">
-              Turn readiness gaps into concrete weekly action items. Every completed milestone is recorded in your authentic Progress Ledger.
+              Turn readiness gaps into concrete weekly action items. Every completed milestone is recorded in your verified Career Passport.
             </p>
           </div>
 

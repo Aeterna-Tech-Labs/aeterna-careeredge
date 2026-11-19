@@ -46,7 +46,17 @@ export class ServerAiService {
    * Determine which provider to use based on environment.
    */
   getProviderName(): string {
-    return (process.env.AI_PROVIDER || "mock").toLowerCase();
+    const explicit = (process.env.AI_PROVIDER || "").toLowerCase().replace(/['"]/g, "").trim();
+    if (explicit) return explicit;
+    const key =
+      process.env.GROQ_API_KEY ||
+      process.env.XAI_API_KEY ||
+      process.env.GROK_API_KEY ||
+      "";
+    if (key.startsWith("gsk_")) return "groq";
+    if (key.startsWith("xai-")) return "grok";
+    if (process.env.GEMINI_API_KEY) return "gemini";
+    return "mock";
   }
 
   /**
@@ -54,6 +64,19 @@ export class ServerAiService {
    * No hardcoded model names in business logic.
    */
   getModelName(tier: AiModelTier): string {
+    const provider = this.getProviderName();
+    if (provider === "groq") {
+      if (tier === "QUALITY") {
+        return process.env.AI_MODEL_QUALITY || "openai/gpt-oss-120b";
+      }
+      return process.env.AI_MODEL_FAST || "qwen/qwen3.8-27b";
+    }
+    if (provider === "grok" || provider === "xai") {
+      if (tier === "QUALITY") {
+        return process.env.AI_MODEL_QUALITY || "grok-2";
+      }
+      return process.env.AI_MODEL_FAST || "grok-2-mini";
+    }
     if (tier === "QUALITY") {
       return process.env.AI_MODEL_QUALITY || "gemini-3.5-flash-lite";
     }
@@ -91,15 +114,27 @@ export class ServerAiService {
       .digest("hex");
 
     const cachedEntry = RESPONSE_CACHE.get(cacheKey);
-    if (cachedEntry && cachedEntry.expiresAt > Date.now()) {
+    if (!request.bypassCache && cachedEntry && cachedEntry.expiresAt > Date.now()) {
       return {
         ...(cachedEntry.response as AiTaskResponse<T>),
         cached: true,
       };
     }
 
+    if (request.bypassCache) {
+      RESPONSE_CACHE.delete(cacheKey);
+    }
+
     // 3. Check for API keys
     const apiKey =
+      (provider === "groq"
+        ? process.env.GROQ_API_KEY || process.env.XAI_API_KEY || process.env.GROK_API_KEY
+        : provider === "grok" || provider === "xai"
+        ? process.env.XAI_API_KEY || process.env.GROK_API_KEY || process.env.GROQ_API_KEY
+        : process.env.GEMINI_API_KEY) ||
+      process.env.GROQ_API_KEY ||
+      process.env.XAI_API_KEY ||
+      process.env.GROK_API_KEY ||
       process.env.GEMINI_API_KEY ||
       process.env.ANTHROPIC_API_KEY ||
       process.env.OPENAI_API_KEY;
@@ -219,7 +254,12 @@ IMPORTANT PRODUCT INVARIANTS:
               body: JSON.stringify({
                 contents: [{ parts }],
                 generationConfig: {
-                  temperature: 0.2,
+                  temperature:
+                    params.request.temperature ??
+                    (params.request.operation === "LINKEDIN_OPTIMIZATION" ||
+                    params.request.operation === "RESUME_CREATION"
+                      ? 0.7
+                      : 0.2),
                   responseMimeType: "application/json",
                 },
               }),
@@ -283,6 +323,151 @@ IMPORTANT PRODUCT INVARIANTS:
             error: `Gemini API returned HTTP ${status}: ${errText || statusText}`,
             metadata: {
               provider: "google-gemini",
+              model,
+              tier: params.tier,
+              latencyMs: Date.now() - params.startTime,
+              usage: {
+                inputTokens: 0,
+                outputTokens: 0,
+                totalTokens: 0,
+                estimatedCostUsd: 0,
+                estimatedCostInr: 0,
+              },
+              isAiGenerated: true,
+              isStudentVerified: false,
+              generatedAt: new Date(),
+            },
+          };
+        }
+      }
+
+      if (
+        params.provider === "groq" ||
+        params.provider === "grok" ||
+        params.provider === "xai" ||
+        params.apiKey.startsWith("gsk_") ||
+        params.apiKey.startsWith("xai-")
+      ) {
+        const isGroq = params.provider === "groq" || params.apiKey.startsWith("gsk_");
+        const endpoint = isGroq
+          ? "https://api.groq.com/openai/v1/chat/completions"
+          : "https://api.x.ai/v1/chat/completions";
+        const providerLabel = isGroq ? "groq" : "xai-grok";
+
+        let model = params.model;
+        if (isGroq) {
+          if (!model || model.includes("grok") || model.includes("gemini") || model.includes("flash")) {
+            model = params.tier === "QUALITY" ? "openai/gpt-oss-120b" : "qwen/qwen3.8-27b";
+          }
+        } else {
+          if (!model || model.includes("gemini") || model.includes("flash") || model.includes("gpt-oss")) {
+            model = params.tier === "QUALITY" ? "grok-2" : "grok-2-mini";
+          }
+        }
+
+        const promptText = `Operation: ${params.request.operation}
+Student Context:
+${JSON.stringify(params.sanitizedContext, null, 2)}
+${params.request.verifiedReferenceContext ? `Verified References:\n${JSON.stringify(params.request.verifiedReferenceContext, null, 2)}\n` : ""}
+Task Instructions:
+${params.request.customPrompt || "Perform this career advisory operation truthfully according to the student context."}`;
+
+        const systemPrompt = `You are the Aeterna CareerEdge AI Engine.
+You must return ONLY a raw JSON object (no markdown, no backticks, no code blocks) conforming strictly to this schema:
+${params.request.schemaDescription}
+
+IMPORTANT PRODUCT INVARIANTS:
+1. Never invent credentials, college names, grades, companies, dates, or metrics.
+2. If evidence is lacking, state that evidence is needed.
+3. No hiring probability percentages.
+4. Keep advice domain-specific and actionable.`;
+
+        let openAiRes: Response | null = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            openAiRes = await fetch(endpoint, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${params.apiKey}`,
+              },
+              signal: controller.signal,
+              body: JSON.stringify({
+                model,
+                messages: [
+                  { role: "system", content: systemPrompt },
+                  { role: "user", content: promptText },
+                ],
+                temperature:
+                  params.request.temperature ??
+                  (params.request.operation === "LINKEDIN_OPTIMIZATION" ||
+                  params.request.operation === "RESUME_CREATION"
+                    ? 0.7
+                    : 0.2),
+                response_format: { type: "json_object" },
+              }),
+            });
+            if (openAiRes.ok) break;
+            if ((openAiRes.status === 503 || openAiRes.status === 429) && attempt === 0) {
+              await new Promise((r) => setTimeout(r, 1200));
+              continue;
+            }
+            break;
+          } catch (fetchErr) {
+            if (attempt === 0) {
+              await new Promise((r) => setTimeout(r, 1200));
+              continue;
+            }
+            throw fetchErr;
+          }
+        }
+
+        clearTimeout(timer);
+
+        if (openAiRes && openAiRes.ok) {
+          const raw = await openAiRes.json();
+          const rawText = raw?.choices?.[0]?.message?.content || "";
+          let cleanJson = rawText.trim();
+          if (cleanJson.startsWith("```")) {
+            cleanJson = cleanJson.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+          }
+          const parsedData = JSON.parse(cleanJson) as T;
+          const inputTokens = raw?.usage?.prompt_tokens || 200;
+          const outputTokens = raw?.usage?.completion_tokens || 100;
+          const cost = calculateCost(params.tier, inputTokens, outputTokens);
+          const latencyMs = Date.now() - params.startTime;
+
+          return {
+            success: true,
+            data: parsedData,
+            metadata: {
+              provider: providerLabel,
+              model,
+              tier: params.tier,
+              latencyMs,
+              usage: {
+                inputTokens,
+                outputTokens,
+                totalTokens: inputTokens + outputTokens,
+                estimatedCostUsd: cost.usd,
+                estimatedCostInr: cost.inr,
+              },
+              isAiGenerated: true,
+              isStudentVerified: false,
+              generatedAt: new Date(),
+            },
+          };
+        } else {
+          clearTimeout(timer);
+          const status = openAiRes?.status || 500;
+          const statusText = openAiRes?.statusText || "Service Unavailable";
+          const errText = openAiRes ? await openAiRes.text().catch(() => "") : "";
+          console.error(`[AiService] ${providerLabel} API returned status ${status}: ${errText}`);
+          return {
+            success: false,
+            error: `${providerLabel} API returned HTTP ${status}: ${errText || statusText}`,
+            metadata: {
+              provider: providerLabel,
               model,
               tier: params.tier,
               latencyMs: Date.now() - params.startTime,

@@ -46,8 +46,8 @@ const SECONDS_PER_LOOP = 30;
 
 function DestinationPill({ card }: { card: (typeof destinations)[number] }) {
   return (
-    <li className="flex shrink-0 items-center gap-2.5 rounded-xl border border-gold/30 bg-white px-4 py-2 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-gold hover:shadow-md">
-      <span aria-hidden="true" className="text-xl leading-none">
+    <li className="flex shrink-0 items-center gap-2 rounded-xl border border-gold/30 bg-white px-3 py-1.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-gold hover:shadow-md sm:gap-2.5 sm:px-4 sm:py-2">
+      <span aria-hidden="true" className="text-lg leading-none sm:text-xl">
         {card.flag}
       </span>
       <div>
@@ -78,14 +78,14 @@ export function DestinationsSection() {
   });
 
   return (
-    <section className="w-full border-y border-gold/40 bg-white py-6 shadow-md shadow-black/10">
-      <div className="mx-auto max-w-7xl px-margin md:px-margin-tablet lg:px-margin-desktop">
-        <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-8">
+    <section className="w-full overflow-hidden border-y border-gold/40 bg-white py-5 shadow-md shadow-black/10 sm:py-6">
+      <div className="page-container max-w-7xl">
+        <div className="flex flex-col items-center justify-between gap-3 sm:gap-4 md:flex-row md:gap-8">
           <div className="shrink-0 text-center md:text-left">
-            <span className="block text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+            <span className="block text-[10px] font-bold uppercase tracking-wider text-on-surface-variant sm:text-xs">
               Target Global Hubs
             </span>
-            <p className="text-base font-bold text-primary">
+            <p className="text-sm font-bold text-primary sm:text-base">
               Top Destinations for 2026–27
             </p>
           </div>
