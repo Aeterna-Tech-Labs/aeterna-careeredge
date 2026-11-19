@@ -131,6 +131,123 @@ export class LocalPrivateStorageProvider implements StorageProvider {
 }
 
 /**
+ * Supabase Storage Provider
+ * Uses Supabase Storage REST API to securely store student documents in the cloud.
+ * Works natively in serverless environments (Vercel) without local disk dependencies.
+ */
+export class SupabaseStorageProvider implements StorageProvider {
+  name = "SUPABASE";
+  private supabaseUrl: string;
+  private apiKey: string;
+  private bucket: string;
+
+  constructor() {
+    this.supabaseUrl = (
+      process.env.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      "https://bifjznuuhigmpayefswf.supabase.co"
+    ).replace(/\/$/, "");
+
+    this.apiKey =
+      process.env.SUPABASE_SECRET_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SERVICE_KEY ||
+      process.env.SUPABASE_KEY ||
+      process.env.SUPABASE_PUBLISHABLE_KEY ||
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      "";
+
+    this.bucket = process.env.SUPABASE_STORAGE_BUCKET || "documents";
+
+    if (!this.apiKey) {
+      console.warn("⚠️ [SUPABASE STORAGE] No Supabase API key (SUPABASE_SECRET_KEY or SUPABASE_KEY) found.");
+    }
+  }
+
+  private cleanKey(key: string): string {
+    return key.replace(/^\/+/, "");
+  }
+
+  async upload(key: string, buffer: Buffer, mimeType: string): Promise<string> {
+    const cleaned = this.cleanKey(key);
+    const url = `${this.supabaseUrl}/storage/v1/object/${this.bucket}/${cleaned}`;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        apikey: this.apiKey,
+        "Content-Type": mimeType || "application/octet-stream",
+        "x-upsert": "true",
+      },
+      body: new Uint8Array(buffer),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      throw new Error(`Supabase Storage upload failed (${res.status}): ${errText || res.statusText}`);
+    }
+
+    return cleaned;
+  }
+
+  async download(key: string): Promise<Buffer> {
+    const cleaned = this.cleanKey(key);
+    let url = `${this.supabaseUrl}/storage/v1/object/authenticated/${this.bucket}/${cleaned}`;
+    let res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        apikey: this.apiKey,
+      },
+    });
+
+    if (!res.ok) {
+      url = `${this.supabaseUrl}/storage/v1/object/${this.bucket}/${cleaned}`;
+      res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          apikey: this.apiKey,
+        },
+      });
+    }
+
+    if (!res.ok) {
+      throw new Error(`Supabase Storage download failed (${res.status}): ${res.statusText}`);
+    }
+
+    const arrayBuffer = await res.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  }
+
+  async delete(key: string): Promise<void> {
+    const cleaned = this.cleanKey(key);
+    const url = `${this.supabaseUrl}/storage/v1/object/${this.bucket}`;
+    await fetch(url, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        apikey: this.apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prefixes: [cleaned] }),
+    });
+  }
+
+  async exists(key: string): Promise<boolean> {
+    const cleaned = this.cleanKey(key);
+    const url = `${this.supabaseUrl}/storage/v1/object/info/${this.bucket}/${cleaned}`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        apikey: this.apiKey,
+      },
+    });
+    return res.ok;
+  }
+}
+
+/**
  * Production S3/R2 Storage Provider Placeholder
  * Easily plugged in with AWS SDK / @aws-sdk/client-s3 once cloud credentials are provided.
  */
@@ -146,12 +263,10 @@ export class S3StorageProvider implements StorageProvider {
   }
 
   async upload(_key: string, _buffer: Buffer, _mimeType: string): Promise<string> {
-    // S3 PutObjectCommand will be executed here when credentials are configured
     throw new Error("S3 provider is waiting for AWS credentials from operations team.");
   }
 
   async download(_key: string): Promise<Buffer> {
-    // S3 GetObjectCommand will be executed here
     throw new Error("S3 provider is waiting for AWS credentials from operations team.");
   }
 
@@ -173,6 +288,24 @@ export function getStorageProvider(): StorageProvider {
 
   const configuredProvider = process.env.STORAGE_PROVIDER?.toLowerCase();
 
+  // 1. Supabase Storage (Preferred if configured or if key is provided)
+  if (
+    configuredProvider === "supabase" ||
+    Boolean(process.env.SUPABASE_SECRET_KEY) ||
+    Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY) ||
+    Boolean(process.env.SUPABASE_KEY) ||
+    Boolean(process.env.SUPABASE_PUBLISHABLE_KEY) ||
+    Boolean(process.env.SUPABASE_ANON_KEY)
+  ) {
+    try {
+      activeStorageProvider = new SupabaseStorageProvider();
+      return activeStorageProvider;
+    } catch (err) {
+      console.warn("⚠️ [STORAGE] Failed to initialize Supabase provider, falling back to LocalPrivateStorageProvider.", err);
+    }
+  }
+
+  // 2. S3 Provider
   if (configuredProvider === "s3" && process.env.AWS_S3_BUCKET) {
     try {
       activeStorageProvider = new S3StorageProvider();
@@ -182,6 +315,7 @@ export function getStorageProvider(): StorageProvider {
     }
   }
 
+  // 3. Local / Serverless tmp Fallback
   activeStorageProvider = new LocalPrivateStorageProvider();
   return activeStorageProvider;
 }
