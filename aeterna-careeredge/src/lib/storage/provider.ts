@@ -3,6 +3,7 @@
 
 import fs from "fs";
 import path from "path";
+import os from "os";
 
 export interface StorageProvider {
   name: string;
@@ -16,19 +17,48 @@ export interface StorageProvider {
  * Local Private Storage Provider
  * Saves files strictly outside of public/ in an isolated directory
  * Accessible only via authenticated server route handlers.
+ * Automatically uses os.tmpdir() in serverless environments (Vercel / Lambda).
  */
 export class LocalPrivateStorageProvider implements StorageProvider {
   name = "LOCAL_PRIVATE";
   private baseDir: string;
 
   constructor(customBaseDir?: string) {
-    this.baseDir =
-      customBaseDir ||
-      process.env.PRIVATE_STORAGE_PATH ||
-      path.resolve(process.cwd(), "storage", "private_uploads");
+    if (customBaseDir) {
+      this.baseDir = customBaseDir;
+    } else if (process.env.PRIVATE_STORAGE_PATH) {
+      this.baseDir = process.env.PRIVATE_STORAGE_PATH;
+    } else if (
+      process.env.VERCEL ||
+      process.env.AWS_LAMBDA_FUNCTION_NAME ||
+      process.env.LAMBDA_TASK_ROOT ||
+      process.env.NODE_ENV === "production"
+    ) {
+      // In serverless environments (Vercel / AWS Lambda), the deployment bundle is read-only.
+      // Writable scratch storage is strictly permitted under os.tmpdir() (/tmp).
+      this.baseDir = path.resolve(os.tmpdir(), "careeredge_storage", "private_uploads");
+    } else {
+      try {
+        const defaultDir = path.resolve(process.cwd(), "storage", "private_uploads");
+        if (!fs.existsSync(defaultDir)) {
+          fs.mkdirSync(defaultDir, { recursive: true });
+        }
+        this.baseDir = defaultDir;
+      } catch {
+        this.baseDir = path.resolve(os.tmpdir(), "careeredge_storage", "private_uploads");
+      }
+    }
 
-    if (!fs.existsSync(this.baseDir)) {
-      fs.mkdirSync(this.baseDir, { recursive: true });
+    try {
+      if (!fs.existsSync(this.baseDir)) {
+        fs.mkdirSync(this.baseDir, { recursive: true });
+      }
+    } catch {
+      // Fallback directly to os.tmpdir() if custom path cannot be written
+      this.baseDir = path.resolve(os.tmpdir(), "careeredge_private_uploads");
+      if (!fs.existsSync(this.baseDir)) {
+        fs.mkdirSync(this.baseDir, { recursive: true });
+      }
     }
   }
 
@@ -48,34 +78,55 @@ export class LocalPrivateStorageProvider implements StorageProvider {
     const fullPath = this.resolveSafePath(key);
     const parentDir = path.dirname(fullPath);
 
-    if (!fs.existsSync(parentDir)) {
-      fs.mkdirSync(parentDir, { recursive: true });
+    try {
+      if (!fs.existsSync(parentDir)) {
+        fs.mkdirSync(parentDir, { recursive: true });
+      }
+      await fs.promises.writeFile(fullPath, buffer);
+    } catch (err) {
+      console.warn("[StorageProvider] Write to baseDir failed, attempting fallback to tmp:", err);
+      const fallbackPath = path.resolve(os.tmpdir(), "careeredge_private_uploads", path.basename(fullPath));
+      const fallbackDir = path.dirname(fallbackPath);
+      if (!fs.existsSync(fallbackDir)) {
+        fs.mkdirSync(fallbackDir, { recursive: true });
+      }
+      await fs.promises.writeFile(fallbackPath, buffer);
     }
-
-    await fs.promises.writeFile(fullPath, buffer);
     return key;
   }
 
   async download(key: string): Promise<Buffer> {
     const fullPath = this.resolveSafePath(key);
 
-    if (!fs.existsSync(fullPath)) {
-      throw new Error(`File not found at storage key: ${key}`);
+    if (fs.existsSync(fullPath)) {
+      return fs.promises.readFile(fullPath);
     }
 
-    return fs.promises.readFile(fullPath);
+    // Check fallback in tmp
+    const fallbackPath = path.resolve(os.tmpdir(), "careeredge_private_uploads", path.basename(fullPath));
+    if (fs.existsSync(fallbackPath)) {
+      return fs.promises.readFile(fallbackPath);
+    }
+
+    throw new Error(`File not found at storage key: ${key}`);
   }
 
   async delete(key: string): Promise<void> {
     const fullPath = this.resolveSafePath(key);
     if (fs.existsSync(fullPath)) {
-      await fs.promises.unlink(fullPath);
+      await fs.promises.unlink(fullPath).catch(() => {});
+    }
+    const fallbackPath = path.resolve(os.tmpdir(), "careeredge_private_uploads", path.basename(fullPath));
+    if (fs.existsSync(fallbackPath)) {
+      await fs.promises.unlink(fallbackPath).catch(() => {});
     }
   }
 
   async exists(key: string): Promise<boolean> {
     const fullPath = this.resolveSafePath(key);
-    return fs.existsSync(fullPath);
+    if (fs.existsSync(fullPath)) return true;
+    const fallbackPath = path.resolve(os.tmpdir(), "careeredge_private_uploads", path.basename(fullPath));
+    return fs.existsSync(fallbackPath);
   }
 }
 
