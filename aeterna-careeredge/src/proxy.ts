@@ -105,7 +105,7 @@ async function getSessionFromRequest(
   }
 }
 
-export async function proxy(request: NextRequest): Promise<NextResponse> {
+export default async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
 
   // Skip Next.js internals and static assets
@@ -159,6 +159,8 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
   return NextResponse.next();
 }
+
+export { proxy, proxy as middleware };
 
 export const config = {
   matcher: [
